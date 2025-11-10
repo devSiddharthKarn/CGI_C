@@ -180,6 +180,94 @@ void CGIPresentBuffer(CGIWindow *window)
     XFlush(window->windowState.display);
 }
 
+KeySym  CGIInputKeyToKeySym(CGIInputKey key){
+    switch(key){
+        case CGI_input_key_a: return XK_a;
+        case CGI_input_key_b: return XK_b;
+        case CGI_input_key_c: return XK_c;
+        case CGI_input_key_d: return XK_d;
+        case CGI_input_key_e: return XK_e;
+        case CGI_input_key_f: return XK_f;
+        case CGI_input_key_g: return XK_g;
+        case CGI_input_key_h: return XK_h;
+        case CGI_input_key_i: return XK_i;
+        case CGI_input_key_j: return XK_j;
+        case CGI_input_key_k: return XK_k;
+        case CGI_input_key_l: return XK_l;
+        case CGI_input_key_m: return XK_m;
+        case CGI_input_key_n: return XK_n;
+        case CGI_input_key_o: return XK_o;
+        case CGI_input_key_p: return XK_p;
+        case CGI_input_key_q: return XK_q;
+        case CGI_input_key_r: return XK_r;
+        case CGI_input_key_s: return XK_s;
+        case CGI_input_key_t: return XK_t;
+        case CGI_input_key_u: return XK_u;
+        case CGI_input_key_v: return XK_v;
+        case CGI_input_key_w: return XK_w;
+        case CGI_input_key_x: return XK_x;
+        case CGI_input_key_y: return XK_y;
+        case CGI_input_key_z: return XK_z;
+        case CGI_input_key_0: return XK_0;
+        case CGI_input_key_1: return XK_1;
+        case CGI_input_key_2: return XK_2;
+        case CGI_input_key_3: return XK_3;
+        case CGI_input_key_4: return XK_4;
+        case CGI_input_key_5: return XK_5;
+        case CGI_input_key_6: return XK_6;
+        case CGI_input_key_7: return XK_7;
+        case CGI_input_key_8: return XK_8;
+        case CGI_input_key_9: return XK_9;
+        case CGI_input_key_f1: return XK_F1;
+        case CGI_input_key_f2: return XK_F2;
+        case CGI_input_key_f3: return XK_F3;
+        case CGI_input_key_f4: return XK_F4;
+        case CGI_input_key_f5: return XK_F5;
+        case CGI_input_key_f6: return XK_F6;
+        case CGI_input_key_f7: return XK_F7;
+        case CGI_input_key_f8: return XK_F8;
+        case CGI_input_key_f9: return XK_F9;
+        case CGI_input_key_f10: return XK_F10;
+        case CGI_input_key_f11: return XK_F11;
+        case CGI_input_key_f12: return XK_F12;
+        case CGI_input_key_up: return XK_Up;
+        case CGI_input_key_down: return XK_Down;
+        case CGI_input_key_left: return XK_Left;
+        case CGI_input_key_right: return XK_Right;
+        case CGI_input_key_enter: return XK_Return;
+        case CGI_input_key_escape: return XK_Escape;
+        case CGI_input_key_space: return XK_space;
+        case CGI_input_key_backspace: return XK_BackSpace;
+        case CGI_input_key_shift: return XK_Shift_L;
+        case CGI_input_key_ctrl: return XK_Control_L;
+        case CGI_input_key_alt: return XK_Alt_L;
+        
+        default: return NoSymbol;
+    }
+
+    return NoSymbol;
+}
+
+
+CGIBool CGIIsKeyPressed(CGIWindow* window,CGIInputKey key){
+    char keys[32];
+
+    XQueryKeymap(window->windowState.display,keys);
+
+    KeySym keysym = CGIInputKeyToKeySym(key);
+    if(keysym==NoSymbol) return CGI_false;
+
+    KeyCode code = XKeysymToKeycode(window->windowState.display,keysym);
+    if(code ==0) return CGI_false;
+
+    if(keys[code/8] & (1<<(code%8))){
+        return CGI_true;
+    }
+
+    return CGI_false;
+
+}
+
 CGIBool CGIResizeBuffer(CGIWindow *window)
 {
     if (!window)
@@ -301,6 +389,8 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
     XStoreName(window->windowState.display, window->windowState.window, window_name);
     window->windowState.gc = XCreateGC(window->windowState.display, window->windowState.window, 0, NULL);
 
+    XSelectInput(window->windowState.display,window->windowState.window,StructureNotifyMask);
+
     if (!window->windowState.window || !window->windowState.gc)
     {
         CGIWindowCleanup(window);
@@ -336,6 +426,18 @@ CGIBool CGIIsWindowOpen(const CGIWindow *window)
     return window->open;
 }
 
+
+CGIBool CGIIsWindowFocused(CGIWindow* window){
+    int revert;
+    Window win;
+    XGetInputFocus(window->windowState.display,&win,&revert);
+
+    if(win==window->windowState.window){
+        return CGI_true;
+    }
+
+    return CGI_false;
+}
 // CGIBool CGIIsKeyPressed(CGIKey key)
 // {
 // }
@@ -350,6 +452,7 @@ void process_events(CGIWindow* window,XEvent* event)
         set_window_display_attrs(window);
         CGIResizeBuffer(window);
     }
+    
 
 
     // set_window_display_attrs(window);

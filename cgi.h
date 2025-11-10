@@ -145,6 +145,8 @@ CGIBool CGIRefreshBuffer(CGIWindow *window);
 
 CGIBool CGIBufferClear(CGIWindow *window, CGIColor_t color);
 
-CGIBool CGIIsKeyPressed(CGIInputKey key);
+CGIBool CGIIsKeyPressed(CGIWindow*  window,CGIInputKey key);
+
+CGIBool CGIIsWindowFocused( CGIWindow* window);
 
 // CGIBool CGIWriteText(CGIWindow* window,char* string,int x_pos,int y_pos);

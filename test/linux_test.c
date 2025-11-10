@@ -31,8 +31,24 @@ int main(){
             }
         }
 
-        pnt.x++;
-        pnt.y++;
+        if(CGIIsKeyPressed(window,CGI_input_key_a)){
+            pnt.x--;
+        }
+
+        if(CGIIsKeyPressed(window,CGI_input_key_s)){
+            pnt.y++;
+        }
+
+        if(CGIIsKeyPressed(window,CGI_input_key_d)){
+            pnt.x++;
+        }
+
+        if(CGIIsKeyPressed(window,CGI_input_key_w)){
+            pnt.y--;
+        }
+
+        // pnt.x++;
+        // pnt.y++;
 
         // sleep(0);
         

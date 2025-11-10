@@ -179,7 +179,7 @@ int CGIKeyToWin32VKKey(CGIInputKey key)
     return 0;
 }
 
-CGIBool CGIIsKeyPressed(CGIInputKey key){
+CGIBool CGIIsKeyPressed(CGIWindow* window,CGIInputKey key){
     int vk_key = CGIKeyToWin32VKKey(key);
     if(vk_key == 0){
         return CGI_false;
@@ -688,6 +688,14 @@ const void *CGIQueryWindow(CGIQuery query, CGIWindow *window)
     }
 
     return NULL;
+}
+
+CGIBool CGIIsWindowFocused(CGIWindow* window){
+    if(GetForegroundWindow()==window->windowState.hwnd){
+        return CGI_true;
+    }
+
+    return CGI_false;
 }
 
 // void CGIShowInfoDialogBox(CGIValue type, char *header, char *message)

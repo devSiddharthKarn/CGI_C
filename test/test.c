@@ -29,19 +29,19 @@ int main(){
             }
         }
 
-        if(CGIIsKeyPressed(CGI_input_key_a)){
+        if(CGIIsKeyPressed(window,CGI_input_key_a)){
             point.x--;
         }
 
-        if(CGIIsKeyPressed(CGI_input_key_s)){
+        if(CGIIsKeyPressed(window,CGI_input_key_s)){
             point.y++;
         }
 
-        if(CGIIsKeyPressed(CGI_input_key_d)){
+        if(CGIIsKeyPressed(window,CGI_input_key_d)){
             point.x++;
         }
 
-        if(CGIIsKeyPressed(CGI_input_key_w)){
+        if(CGIIsKeyPressed(window,CGI_input_key_w)){
             point.y--;
         }
     }
