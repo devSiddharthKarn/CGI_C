@@ -1,3 +1,5 @@
+#define CGI_WINDOWS_IMPLEMENTATION_ACTIVE
+
 #include "Windows.h"
 #include "cgi.h"
 #include "stdlib.h"
@@ -5,7 +7,6 @@
 
 
 // #ifdef _WIN32
-#define CGI_WINDOWS_IMPLEMENTATION_ACTIVE
 // #endif
 
 CGIColor_t CGIMakeColor(unsigned char r, unsigned char g, unsigned char b)
@@ -31,6 +32,169 @@ CGIColor_t CGIMakeColor(unsigned char r, unsigned char g, unsigned char b)
 // {
 //     return color->b;
 // }
+
+struct System{
+    struct {
+        unsigned int width;
+        unsigned int height;
+    }Display;
+
+    struct {
+        char keys[32];
+    }Keyboard;
+
+    struct {
+        CGIPoint position;
+    }Cursor;
+};
+
+
+int CGIKeyToWin32VKKey(CGIInputKey key)
+{
+    switch (key)
+    {
+    case CGI_input_key_a:
+        return 'A';
+    case CGI_input_key_b:
+        return 'B';
+    case CGI_input_key_c:
+        return 'C';
+    case CGI_input_key_d:
+        return 'D';
+    case CGI_input_key_e:
+        return 'E';
+    case CGI_input_key_f:
+        return 'F';
+    case CGI_input_key_g:
+        return 'G';
+    case CGI_input_key_h:
+        return 'H';
+    case CGI_input_key_i:
+        return 'I';
+    case CGI_input_key_j:
+        return 'J';
+    case CGI_input_key_k:
+        return 'K';
+    case CGI_input_key_l:
+        return 'L';
+    case CGI_input_key_m:
+        return 'M';
+    case CGI_input_key_n:
+        return 'N';
+    case CGI_input_key_o:
+        return 'O';
+    case CGI_input_key_p:
+        return 'P';
+    case CGI_input_key_q:
+        return 'Q';
+    case CGI_input_key_r:
+        return 'R';
+    case CGI_input_key_s:
+        return 'S';
+    case CGI_input_key_t:
+        return 'T';
+    case CGI_input_key_u:
+        return 'U';
+    case CGI_input_key_v:
+        return 'V';
+    case CGI_input_key_w:
+        return 'W';
+    case CGI_input_key_x:
+        return 'X';
+    case CGI_input_key_y:
+        return 'Y';
+    case CGI_input_key_z:
+        return 'Z';
+    case CGI_input_key_0:
+        return '0';
+    case CGI_input_key_1:
+        return '1';
+    case CGI_input_key_2:
+        return '2';
+    case CGI_input_key_3:
+        return '3';
+    case CGI_input_key_4:
+        return '4';
+    case CGI_input_key_5:
+        return '5';
+    case CGI_input_key_6:
+        return '6';
+    case CGI_input_key_7:
+        return '7';
+    case CGI_input_key_8:
+        return '8';
+    case CGI_input_key_9:
+        return '9';
+    case CGI_input_key_f1:
+        return VK_F1;
+    case CGI_input_key_f2:
+        return VK_F2;
+    case CGI_input_key_f3:
+        return VK_F3;
+    case CGI_input_key_f4:
+        return VK_F4;
+    case CGI_input_key_f5:
+        return VK_F5;
+    case CGI_input_key_f6:
+        return VK_F6;
+    case CGI_input_key_f7:
+        return VK_F7;
+    case CGI_input_key_f8:
+        return VK_F8;
+    case CGI_input_key_f9:
+        return VK_F9;
+    case CGI_input_key_f10:
+        return VK_F10;
+    case CGI_input_key_f11:
+        return VK_F11;
+    case CGI_input_key_f12:
+        return VK_F12;
+    case CGI_input_key_escape:
+        return VK_ESCAPE;
+    case CGI_input_key_enter:
+        return VK_RETURN;
+    case CGI_input_key_space:
+        return VK_SPACE;
+    case CGI_input_key_up:
+        return VK_UP;
+    case CGI_input_key_down:
+        return VK_DOWN;
+    case CGI_input_key_left:
+        return VK_LEFT;
+    case CGI_input_key_right:
+        return VK_RIGHT;
+    case CGI_input_key_backspace:
+        return VK_BACK;
+    case CGI_input_key_shift:
+        return VK_SHIFT;
+    case CGI_input_key_ctrl:
+        return VK_CONTROL;
+    case CGI_input_key_alt:
+        return VK_MENU;
+    
+    default:
+        break;
+    }
+
+    return 0;
+}
+
+CGIBool CGIIsKeyPressed(CGIInputKey key){
+    int vk_key = CGIKeyToWin32VKKey(key);
+    if(vk_key == 0){
+        return CGI_false;
+    }
+
+    SHORT key_state = GetAsyncKeyState(vk_key);
+
+    if (key_state & 0x8000) {
+        return CGI_true;
+    } else {
+        return CGI_false;
+    }
+
+
+}
 
 struct SYSDISPLAY
 {
@@ -143,6 +307,8 @@ CGIBool MakeBMI(CGIWindow *window, BITMAPINFO *bmi, unsigned int height, unsigne
 
     window->windowState.hBitMap = CreateDIBSection(window->windowState.offscreenBuffer, &window->windowState.bmi, DIB_RGB_COLORS, &window->windowState.pixelbuffer, NULL, 0);
 
+    // SetDIBits(window->windowState.hdc,window->windowState.hBitMap,0,window->windowState.buffer_height,window->windowState.offscreenBuffer,&bmi,DIB_RGB_COLORS);
+
     SelectObject(window->windowState.offscreenBuffer, window->windowState.hBitMap);
 
     return CGI_true;
@@ -199,6 +365,9 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
         LoadBufferView(window->windowState.pixelbuffer, window->windowState.buffer,
                        window->windowState.buffer_width, window->windowState.buffer_height);
+
+                    
+    // SetDIBits(window->windowState.hdc,window->windowState.hBitMap,0,window->windowState.buffer_height,window->windowState.offscreenBuffer,&window->windowState.bmi,DIB_RGB_COLORS);
 
         BitBlt(window->windowState.hdc, 0, 0, window->windowState.buffer_width,
                window->windowState.buffer_height, window->windowState.offscreenBuffer, 0, 0, SRCCOPY);
