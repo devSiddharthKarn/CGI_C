@@ -1,58 +1,76 @@
-#define CGI_LINUX_IMPLEMENTATION_ACTIVE
 #include "cgi.h"
-#include "unistd.h"
-#include "time.h"
-#include "stdio.h"
-int main(){
+#include <stdio.h>
+#include <stdlib.h>
 
-    clock_t now = clock();
-    printf("%li",now);
-    
+#ifdef _WIN32
+#include <windows.h>
+#elif __linux__
+#include <X11/Xlib.h>
+#endif
 
-    CGIWindow* window = CGICreateWindow("mywindow","mywindow",0,0,500,500,CGIMakeColor(255,23,12));
+int main() {
+    // 1️⃣ Create a window
+    CGIWindow* win = CGICreateWindow(
+        "CGIWindow", "Rainbow Square Demo",
+        100, 100, 600, 400,
+        CGIMakeColor(0,0,0)  // black background
+    );
 
-    CGIShowWindow(window);
+    if (!win) {
+        printf("Failed to create window!\n");
+        return 1;
+    }
 
-    CGIPoint pnt;
-    pnt.x=0;
-    pnt.y=0;
+    CGIShowWindow(win);
 
-    CGIColor_t color = *(CGIColor_t*)CGIQueryWindow(CGI_query_window_base_color,window);
+    // 2️⃣ Initial position of the square
+    int x = 300, y = 200;
+    int size = 50;
+    CGIColor_t color = CGIMakeColor(255,0,0);
 
-    while(CGIIsWindowOpen(window)){
-        CGIRefreshWindow(window);
-        CGIBufferClear(window,color);
-        
-        // pnt = (CGIPoint*)CGIQueryWindow(CGI_query_system_cursor_position,window);
+    while (CGIIsWindowOpen(win)) {
+        // Clear the window
+        // CGIRefreshWindow(win);
+        CGIBufferClear(win, CGIMakeColor(0,0,0));
 
-        for(int i=pnt.y;i<pnt.y+100;i++){
-            for(int j=pnt.x;j<pnt.x+100;j++){
-                CGISetPixel(window,j,i,CGIMakeColor(23,45,67));
+        // Draw a rainbow square
+        for(int i=0;i<size;i++) {
+            for(int j=0;j<size;j++) {
+                color.r = (x+i) % 256;
+                color.g = (y+j) % 256;
+                color.b = (i+j) % 256;
+                CGISetPixel(win, x+i, y+j, color);
             }
         }
 
-        if(CGIIsKeyPressed(window,CGI_input_key_a)){
-            pnt.x--;
-        }
+        CGIRefreshWindow(win);
 
-        if(CGIIsKeyPressed(window,CGI_input_key_s)){
-            pnt.y++;
-        }
+        // 3️⃣ Handle arrow keys
+        if(CGIIsKeyPressed(win, CGI_input_key_up))    y -= 5;
+        if(CGIIsKeyPressed(win, CGI_input_key_down))  y += 5;
+        if(CGIIsKeyPressed(win, CGI_input_key_left))  x -= 5;
+        if(CGIIsKeyPressed(win, CGI_input_key_right)) x += 5;
 
-        if(CGIIsKeyPressed(window,CGI_input_key_d)){
-            pnt.x++;
-        }
+        // 4️⃣ Handle scroll (optional)
+#ifdef _WIN32
+        if(CGIIsKeyPressed(win, CGI_input_key_space)) size += 2; // space increases size
+#elif __linux__
+        // scroll events handled inside CGI if implemented
+#endif
 
-        if(CGIIsKeyPressed(window,CGI_input_key_w)){
-            pnt.y--;
-        }
+        // Keep inside window bounds
+        if(x<0) x=0;
+        if(y<0) y=0;
+        if(x>*(int*)CGIQueryWindow(CGI_query_window_buffer_width, win)-size) x=*(int*)CGIQueryWindow(CGI_query_window_buffer_width, win)-size;
+        if(y>*(int*)CGIQueryWindow(CGI_query_window_buffer_height, win)-size) y=*(int*)CGIQueryWindow(CGI_query_window_buffer_height, win)-size;
 
-        // pnt.x++;
-        // pnt.y++;
-
-        // sleep(0);
-        
+#ifdef _WIN32
+        Sleep(16); // ~60 FPS
+#else
+        usleep(16000);
+#endif
     }
 
-    CGIWindowCleanup(window);
+    CGIWindowCleanup(win);
+    return 0;
 }

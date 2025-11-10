@@ -5,7 +5,6 @@
 #include "stdlib.h"
 #include "string.h"
 
-
 // #ifdef _WIN32
 // #endif
 
@@ -33,21 +32,24 @@ CGIColor_t CGIMakeColor(unsigned char r, unsigned char g, unsigned char b)
 //     return color->b;
 // }
 
-struct System{
-    struct {
+struct System
+{
+    struct
+    {
         unsigned int width;
         unsigned int height;
-    }Display;
+    } Display;
 
-    struct {
+    struct
+    {
         char keys[32];
-    }Keyboard;
+    } Keyboard;
 
-    struct {
+    struct
+    {
         CGIPoint position;
-    }Cursor;
+    } Cursor;
 };
-
 
 int CGIKeyToWin32VKKey(CGIInputKey key)
 {
@@ -171,7 +173,7 @@ int CGIKeyToWin32VKKey(CGIInputKey key)
         return VK_CONTROL;
     case CGI_input_key_alt:
         return VK_MENU;
-    
+
     default:
         break;
     }
@@ -179,21 +181,24 @@ int CGIKeyToWin32VKKey(CGIInputKey key)
     return 0;
 }
 
-CGIBool CGIIsKeyPressed(CGIWindow* window,CGIInputKey key){
+CGIBool CGIIsKeyPressed(CGIWindow *window, CGIInputKey key)
+{
     int vk_key = CGIKeyToWin32VKKey(key);
-    if(vk_key == 0){
+    if (vk_key == 0)
+    {
         return CGI_false;
     }
 
     SHORT key_state = GetAsyncKeyState(vk_key);
 
-    if (key_state & 0x8000) {
+    if (key_state & 0x8000)
+    {
         return CGI_true;
-    } else {
+    }
+    else
+    {
         return CGI_false;
     }
-
-
 }
 
 struct SYSDISPLAY
@@ -366,8 +371,7 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         LoadBufferView(window->windowState.pixelbuffer, window->windowState.buffer,
                        window->windowState.buffer_width, window->windowState.buffer_height);
 
-                    
-    // SetDIBits(window->windowState.hdc,window->windowState.hBitMap,0,window->windowState.buffer_height,window->windowState.offscreenBuffer,&window->windowState.bmi,DIB_RGB_COLORS);
+        // SetDIBits(window->windowState.hdc,window->windowState.hBitMap,0,window->windowState.buffer_height,window->windowState.offscreenBuffer,&window->windowState.bmi,DIB_RGB_COLORS);
 
         BitBlt(window->windowState.hdc, 0, 0, window->windowState.buffer_width,
                window->windowState.buffer_height, window->windowState.offscreenBuffer, 0, 0, SRCCOPY);
@@ -671,14 +675,6 @@ const void *CGIQueryWindow(CGIQuery query, CGIWindow *window)
         window->display.height = GetSystemMetrics(SM_CYSCREEN);
         return &window->display.height;
     }
-    // case CGI_window_position:{
-    //     CGIPoint point ;
-
-    //     return &window->x_pos;
-    // }
-    // case CGI_window_y_position:{
-    //     return &window->y_pos;
-    // }
     case CGI_query_window_open_status:
     {
         return &window->open;
@@ -690,8 +686,10 @@ const void *CGIQueryWindow(CGIQuery query, CGIWindow *window)
     return NULL;
 }
 
-CGIBool CGIIsWindowFocused(CGIWindow* window){
-    if(GetForegroundWindow()==window->windowState.hwnd){
+CGIBool CGIIsWindowFocused(CGIWindow *window)
+{
+    if (GetForegroundWindow() == window->windowState.hwnd)
+    {
         return CGI_true;
     }
 

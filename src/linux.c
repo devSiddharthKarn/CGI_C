@@ -389,7 +389,7 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
     XStoreName(window->windowState.display, window->windowState.window, window_name);
     window->windowState.gc = XCreateGC(window->windowState.display, window->windowState.window, 0, NULL);
 
-    XSelectInput(window->windowState.display,window->windowState.window,StructureNotifyMask);
+    XSelectInput(window->windowState.display,window->windowState.window,StructureNotifyMask|MotionNotify);
 
     if (!window->windowState.window || !window->windowState.gc)
     {
@@ -454,7 +454,11 @@ void process_events(CGIWindow* window,XEvent* event)
     }
     
 
-
+    if(event->type==MotionNotify){
+        set_window_pos_on_screen(window);
+        set_width_and_height(window);
+        set_window_display_attrs(window);
+    }
     // set_window_display_attrs(window);
 }
 
