@@ -1,0 +1,537 @@
+#include "Windows.h"
+#include "cgi.h"
+#include "stdlib.h"
+#include "string.h"
+
+
+// #ifdef _WIN32
+#define CGI_WINDOWS_IMPLEMENTATION_ACTIVE
+// #endif
+
+CGIColor_t CGIMakeColor(unsigned char r, unsigned char g, unsigned char b)
+{
+    CGIColor_t color;
+    color.r = r;
+    color.g = g;
+    color.b = b;
+    return color;
+}
+
+// unsigned char CGIParseColorRed(const CGIColor_t *color)
+// {
+//     return color->r;
+// }
+
+// unsigned char CGIParseColorGreen(const CGIColor_t *color)
+// {
+//     return color->g;
+// }
+
+// unsigned char CGIParseColorBlue(const CGIColor_t *color)
+// {
+//     return color->b;
+// }
+
+struct SYSDISPLAY
+{
+    unsigned int width;
+    unsigned int height;
+    CGIPoint cursor;
+};
+
+struct WindowState
+{
+    HWND hwnd;
+    HDC hdc;
+    WNDCLASSA wc;
+    COLORREF *buffer;
+    unsigned int buffer_width;
+    unsigned int buffer_height;
+    PAINTSTRUCT ps;
+    HDC offscreenBuffer;
+    BITMAPINFO bmi;
+    HBITMAP hBitMap;
+    void *pixelbuffer;
+    MSG msg;
+};
+
+struct CGIWindow
+{
+    struct WindowState windowState;
+    char *window_name;
+    CGIPoint position;
+    struct SYSDISPLAY display;
+    unsigned int width;
+    unsigned int height;
+    COLORREF win_base_color;
+    CGIColor_t base_color;
+    CGIBool open;
+};
+
+CGIBool CGIWindowCleanup(CGIWindow *window)
+{
+    if (!window)
+        return CGI_false;
+
+    if (window->windowState.hwnd)
+    {
+        DestroyWindow(window->windowState.hwnd);
+        UnregisterClassA(window->windowState.wc.lpszClassName, window->windowState.wc.hInstance);
+
+        if (window->windowState.hdc)
+        {
+            ReleaseDC(window->windowState.hwnd, window->windowState.hdc);
+            window->windowState.hdc = NULL;
+        }
+        window->windowState.hwnd = NULL;
+    }
+
+    // delete DIB & DC
+    if (window->windowState.hBitMap)
+    {
+        DeleteObject(window->windowState.hBitMap);
+        window->windowState.hBitMap = NULL;
+    }
+    if (window->windowState.offscreenBuffer)
+    {
+        DeleteDC(window->windowState.offscreenBuffer);
+        window->windowState.offscreenBuffer = NULL;
+    }
+
+    if (window->window_name)
+    {
+        free(window->window_name);
+        window->window_name = NULL;
+    }
+
+    if (window->windowState.buffer)
+    {
+        free(window->windowState.buffer);
+        window->windowState.buffer = NULL;
+    }
+
+    free(window);
+
+    return CGI_true;
+}
+
+CGIBool MakeBMI(CGIWindow *window, BITMAPINFO *bmi, unsigned int height, unsigned int width)
+{
+    if (bmi == NULL || window == NULL)
+        return CGI_false;
+    ZeroMemory(bmi, sizeof(BITMAPINFO));
+    bmi->bmiHeader.biBitCount = 24;
+    bmi->bmiHeader.biCompression = BI_RGB;
+    bmi->bmiHeader.biHeight = -height; // top down view + is bottom up view;
+    bmi->bmiHeader.biPlanes = 1;
+    bmi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi->bmiHeader.biWidth = width;
+
+    if (window->windowState.hBitMap)
+    {
+        SelectObject(window->windowState.offscreenBuffer, GetStockObject(NULL_BRUSH)); // deselect
+        DeleteObject(window->windowState.hBitMap);
+        window->windowState.hBitMap = NULL;
+    }
+    if (window->windowState.offscreenBuffer)
+    {
+        DeleteDC(window->windowState.offscreenBuffer);
+        window->windowState.offscreenBuffer = NULL;
+    }
+
+    window->windowState.offscreenBuffer = CreateCompatibleDC(window->windowState.hdc);
+
+    window->windowState.hBitMap = CreateDIBSection(window->windowState.offscreenBuffer, &window->windowState.bmi, DIB_RGB_COLORS, &window->windowState.pixelbuffer, NULL, 0);
+
+    SelectObject(window->windowState.offscreenBuffer, window->windowState.hBitMap);
+
+    return CGI_true;
+}
+
+CGIBool LoadBufferView(void *pixelBuffer, COLORREF *window_main_buffer,
+                       int width, int height)
+{
+    if (!pixelBuffer || !window_main_buffer)
+        return CGI_false;
+
+    unsigned char *buf = (unsigned char *)pixelBuffer;
+
+    int rowSize = (width * 3 + 3) & ~3; // align scanline to 4 bytes
+
+    for (int y = 0; y < height; y++)
+    {
+        unsigned char *row = buf + y * rowSize;
+
+        for (int x = 0; x < width; x++)
+        {
+            int srcPos = y * width + x;
+
+            unsigned char r = GetRValue(window_main_buffer[srcPos]);
+            unsigned char g = GetGValue(window_main_buffer[srcPos]);
+            unsigned char b = GetBValue(window_main_buffer[srcPos]);
+
+            int offset = x * 3;
+            row[offset + 0] = b;
+            row[offset + 1] = g;
+            row[offset + 2] = r;
+        }
+    }
+
+    return CGI_true;
+}
+
+LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
+{
+    CGIWindow *window = (CGIWindow *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    switch (msg)
+    {
+    case WM_NCCREATE:
+    {
+        CREATESTRUCT *cs = (CREATESTRUCT *)lp;
+        window = (CGIWindow *)cs->lpCreateParams;
+        SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)window);
+        return TRUE;
+    }
+
+    case WM_PAINT:
+    {
+        BeginPaint(hwnd, &window->windowState.ps);
+
+        LoadBufferView(window->windowState.pixelbuffer, window->windowState.buffer,
+                       window->windowState.buffer_width, window->windowState.buffer_height);
+
+        BitBlt(window->windowState.hdc, 0, 0, window->windowState.buffer_width,
+               window->windowState.buffer_height, window->windowState.offscreenBuffer, 0, 0, SRCCOPY);
+
+        EndPaint(hwnd, &window->windowState.ps);
+        return 0;
+    }
+
+    case WM_SIZE:
+    {
+        RECT rect;
+        GetClientRect(window->windowState.hwnd, &rect);
+        unsigned int new_width = rect.right - rect.left;
+        unsigned int new_height = rect.bottom - rect.top;
+
+        if (new_width != window->windowState.buffer_width ||
+            new_height != window->windowState.buffer_height)
+        {
+            COLORREF *new_buffer = (COLORREF *)realloc(
+                window->windowState.buffer,
+                new_width * new_height * sizeof(COLORREF));
+
+            if (new_buffer)
+            {
+                window->windowState.buffer = new_buffer;
+                window->windowState.buffer_width = new_width;
+                window->windowState.buffer_height = new_height;
+
+                for (unsigned int i = 0; i < new_width * new_height; i++)
+                {
+                    window->windowState.buffer[i] = window->win_base_color;
+                }
+
+                MakeBMI(window, &window->windowState.bmi, new_height, new_width);
+            }
+        }
+        break;
+    }
+
+    case WM_CLOSE:
+    {
+        window->open = CGI_false;
+        DestroyWindow(hwnd);
+        return 0;
+    }
+
+    case WM_MOVE:
+    {
+        RECT rect;
+        GetWindowRect(window->windowState.hwnd, &rect);
+        window->position.x = rect.left;
+        window->position.y = rect.top;
+        break;
+    }
+
+    case WM_DESTROY:
+    {
+        window->open = CGI_false;
+        PostQuitMessage(0);
+        return 0;
+    }
+
+    default:
+    {
+        return DefWindowProcA(hwnd, msg, wp, lp);
+    }
+    }
+    return 0;
+}
+// CGIBool CGIInitialize(char *output_buffer, char *input_buffer)
+// {
+
+//     if (!output_buffer || !input_buffer)
+//         return CGI_false;
+
+//     if (strlen(output_buffer) == 0 || strlen(input_buffer) == 0)
+//         return CGI_true;
+//     AllocConsole();
+//     freopen(output_buffer, "w", stdout);
+
+//     return CGI_true;
+// }
+
+CGIPoint CGIGetCursorPoint()
+{
+    POINT point;
+    GetCursorPos(&point);
+    CGIPoint ret;
+    ret.x = point.x;
+    ret.y = point.y;
+
+    return ret;
+}
+
+CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_pos, unsigned int y_pos, unsigned int width, unsigned int height, CGIColor_t color)
+{
+    CGIWindow *window = (CGIWindow *)malloc(sizeof(CGIWindow));
+
+    memset(window, 0, sizeof(CGIWindow));
+
+    window->window_name = _strdup(window_name);
+    window->position.x = x_pos;
+    window->position.y = y_pos;
+    window->height = height;
+    window->width = width;
+    window->win_base_color = RGB(color.r, color.g, color.b);
+    window->base_color = color;
+    window->open = CGI_false;
+
+    // handle os level setup
+    ZeroMemory(&window->windowState.wc, sizeof(WNDCLASSA));
+    window->windowState.wc.style = CS_HREDRAW | CS_VREDRAW;
+    window->windowState.wc.lpfnWndProc = windows_procedure;
+    window->windowState.wc.hInstance = GetModuleHandle(NULL);
+    window->windowState.wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    window->windowState.wc.lpszClassName = classname;
+
+    RegisterClassA(&window->windowState.wc);
+
+    window->windowState.hwnd = CreateWindowA(window->windowState.wc.lpszClassName, window->window_name, WS_OVERLAPPEDWINDOW, window->position.x, window->position.y, window->width, window->height, NULL, NULL, window->windowState.wc.hInstance, window);
+
+    if (!window->windowState.hwnd)
+    {
+        CGIWindowCleanup(window);
+        return NULL;
+    }
+
+    window->windowState.hdc = GetDC(window->windowState.hwnd);
+
+    // Get actual client area size
+    RECT rect;
+    GetClientRect(window->windowState.hwnd, &rect);
+    window->windowState.buffer_width = rect.right - rect.left;
+    window->windowState.buffer_height = rect.bottom - rect.top;
+
+    // Allocate buffer with correct client area size
+    window->windowState.buffer = (COLORREF *)malloc(window->windowState.buffer_width * window->windowState.buffer_height * sizeof(COLORREF));
+
+    if (window->windowState.buffer == NULL)
+    {
+        CGIWindowCleanup(window);
+        return NULL;
+    }
+
+    // Fill buffer with base color
+    int buffer_size = window->windowState.buffer_width * window->windowState.buffer_height;
+    for (int i = 0; i < buffer_size; i++)
+    {
+        window->windowState.buffer[i] = window->win_base_color;
+    }
+
+    // Create bitmap with CLIENT AREA dimensions
+    MakeBMI(window, &window->windowState.bmi, window->windowState.buffer_height, window->windowState.buffer_width);
+
+    window->display.width = GetSystemMetrics(SM_CXSCREEN);
+    window->display.height = GetSystemMetrics(SM_CYSCREEN);
+    POINT point;
+    GetCursorPos(&point);
+    window->display.cursor.x = point.x;
+    window->display.cursor.y = point.y;
+
+    return window;
+}
+
+CGIBool CGIShowWindow(CGIWindow *window)
+{
+    if (!window)
+    {
+        return CGI_false;
+    }
+    ShowWindow(window->windowState.hwnd, SW_SHOW);
+
+    window->open = CGI_true;
+
+    RECT rect;
+    GetClientRect(window->windowState.hwnd, &rect);
+    window->windowState.buffer_width = rect.right - rect.left;
+    window->windowState.buffer_height = rect.bottom - rect.top;
+
+    UpdateWindow(window->windowState.hwnd);
+    return CGI_true;
+}
+
+CGIBool CGIIsWindowOpen(const CGIWindow *window)
+{
+    return window->open;
+}
+
+CGIBool CGIRefreshBuffer(CGIWindow *window)
+{
+    if (!window)
+        return CGI_false;
+    InvalidateRect(window->windowState.hwnd, NULL, TRUE);
+    UpdateWindow(window->windowState.hwnd);
+    return CGI_true;
+}
+
+CGIBool CGIBufferClear(CGIWindow *window, CGIColor_t color)
+{
+    if (!window)
+        return CGI_false;
+
+    // int height = window->windowState.buffer_height;
+    // int width = window->windowState.buffer_width;
+    int size = window->windowState.buffer_height * window->windowState.buffer_width;
+    for (int i = 0; i < size; i++)
+    {
+        window->windowState.buffer[i] = RGB(color.r, color.g, color.b);
+    }
+    return CGI_true;
+}
+
+CGIBool CGIRefreshWindow(CGIWindow *window)
+{
+    if (!window)
+        return CGI_false;
+    if (window->open == CGI_false)
+    {
+        // printf("error !! cannot refresh an uncreated window. ptrAddress: %p", window);
+        return CGI_false;
+    }
+    while (PeekMessageA(&window->windowState.msg, NULL, 0, 0, PM_REMOVE))
+    {
+        if (window->windowState.msg.message == WM_QUIT)
+        {
+            window->open = CGI_false;
+            return CGI_false;
+        }
+        TranslateMessage(&window->windowState.msg);
+        DispatchMessageA(&window->windowState.msg);
+    }
+    CGIRefreshBuffer(window);
+    return CGI_true;
+}
+
+void CGISetPixel(CGIWindow *window, int x_pos, int y_pos, CGIColor_t color)
+{
+    if (x_pos < 0 || y_pos < 0 ||
+        x_pos >= (int)window->windowState.buffer_width ||
+        y_pos >= (int)window->windowState.buffer_height)
+        return;
+
+    window->windowState.buffer[y_pos * window->windowState.buffer_width + x_pos] = RGB(color.r, color.g, color.b);
+}
+
+const void *CGIQueryWindow(CGIQuery query, CGIWindow *window)
+{
+    switch (query)
+    {
+    case CGI_query_window_internal_win32_HWND:
+    {
+        return window->windowState.hwnd;
+    }
+    case CGI_query_window_internal_win32_HDC:
+    {
+        return window->windowState.hdc;
+    }
+    case CGI_query_window_internal_win32_BITMAPINFO:
+    {
+        return &window->windowState.bmi;
+    }
+    case CGI_query_window_internal_win32_PAINTSTRUCT:
+    {
+        return &window->windowState.ps;
+    }
+    case CGI_query_window_name:
+    {
+        return window->window_name;
+    }
+    case CGI_query_window_height:
+    {
+        return &window->height;
+    }
+    case CGI_query_window_width:
+    {
+        return &window->width;
+    }
+    case CGI_query_window_buffer_height:
+    {
+        return &window->windowState.buffer_height;
+    }
+    case CGI_query_window_buffer_width:
+    {
+        return &window->windowState.buffer_width;
+    }
+    case CGI_query_window_base_color:
+    {
+        return &window->base_color;
+    }
+    case CGI_query_window_position:
+    {
+        return &window->position;
+    }
+    case CGI_query_system_display_width:
+    {
+        window->display.width = GetSystemMetrics(SM_CXSCREEN);
+        return &window->display.width;
+    }
+    case CGI_query_system_display_height:
+    {
+        window->display.height = GetSystemMetrics(SM_CYSCREEN);
+        return &window->display.height;
+    }
+    // case CGI_window_position:{
+    //     CGIPoint point ;
+
+    //     return &window->x_pos;
+    // }
+    // case CGI_window_y_position:{
+    //     return &window->y_pos;
+    // }
+    case CGI_query_window_open_status:
+    {
+        return &window->open;
+    }
+    default:
+        break;
+    }
+
+    return NULL;
+}
+
+// void CGIShowInfoDialogBox(CGIValue type, char *header, char *message)
+// {
+//     UINT info = 0;
+//     if (type == CGI_Dialog_error)
+//     {
+//         info |= MB_ICONERROR;
+//     }
+//     else if (type == CGI_Dialog_info)
+//     {
+//         info |= MB_ICONEXCLAMATION;
+//     }
+//     MessageBoxA(NULL, message, header, info);
+//     return;
+// }
