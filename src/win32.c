@@ -4,9 +4,8 @@
 #include "cgi.h"
 #include "stdlib.h"
 #include "string.h"
+#include "stdio.h"
 
-// #ifdef _WIN32
-// #endif
 
 CGIColor_t CGIMakeColor(unsigned char r, unsigned char g, unsigned char b)
 {
@@ -17,39 +16,8 @@ CGIColor_t CGIMakeColor(unsigned char r, unsigned char g, unsigned char b)
     return color;
 }
 
-// unsigned char CGIParseColorRed(const CGIColor_t *color)
-// {
-//     return color->r;
-// }
 
-// unsigned char CGIParseColorGreen(const CGIColor_t *color)
-// {
-//     return color->g;
-// }
 
-// unsigned char CGIParseColorBlue(const CGIColor_t *color)
-// {
-//     return color->b;
-// }
-
-struct System
-{
-    struct
-    {
-        unsigned int width;
-        unsigned int height;
-    } Display;
-
-    struct
-    {
-        char keys[32];
-    } Keyboard;
-
-    struct
-    {
-        CGIPoint position;
-    } Cursor;
-};
 
 int CGIKeyToWin32VKKey(CGIInputKey key)
 {
@@ -241,21 +209,19 @@ CGIBool CGIWindowCleanup(CGIWindow *window)
 {
     if (!window)
         return CGI_false;
-
     if (window->windowState.hwnd)
     {
-        DestroyWindow(window->windowState.hwnd);
-        UnregisterClassA(window->windowState.wc.lpszClassName, window->windowState.wc.hInstance);
-
         if (window->windowState.hdc)
         {
             ReleaseDC(window->windowState.hwnd, window->windowState.hdc);
             window->windowState.hdc = NULL;
         }
+
+        DestroyWindow(window->windowState.hwnd);
+        UnregisterClassA(window->windowState.wc.lpszClassName, window->windowState.wc.hInstance);
         window->windowState.hwnd = NULL;
     }
 
-    // delete DIB & DC
     if (window->windowState.hBitMap)
     {
         DeleteObject(window->windowState.hBitMap);
@@ -312,7 +278,6 @@ CGIBool MakeBMI(CGIWindow *window, BITMAPINFO *bmi, unsigned int height, unsigne
 
     window->windowState.hBitMap = CreateDIBSection(window->windowState.offscreenBuffer, &window->windowState.bmi, DIB_RGB_COLORS, &window->windowState.pixelbuffer, NULL, 0);
 
-    // SetDIBits(window->windowState.hdc,window->windowState.hBitMap,0,window->windowState.buffer_height,window->windowState.offscreenBuffer,&bmi,DIB_RGB_COLORS);
 
     SelectObject(window->windowState.offscreenBuffer, window->windowState.hBitMap);
 
@@ -371,8 +336,6 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         LoadBufferView(window->windowState.pixelbuffer, window->windowState.buffer,
                        window->windowState.buffer_width, window->windowState.buffer_height);
 
-        // SetDIBits(window->windowState.hdc,window->windowState.hBitMap,0,window->windowState.buffer_height,window->windowState.offscreenBuffer,&window->windowState.bmi,DIB_RGB_COLORS);
-
         BitBlt(window->windowState.hdc, 0, 0, window->windowState.buffer_width,
                window->windowState.buffer_height, window->windowState.offscreenBuffer, 0, 0, SRCCOPY);
 
@@ -397,15 +360,23 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             if (new_buffer)
             {
                 window->windowState.buffer = new_buffer;
+
+                // Store old dimensions
+                unsigned int old_width = window->windowState.buffer_width;
+                unsigned int old_height = window->windowState.buffer_height;
+
+                // Update to new dimensions
                 window->windowState.buffer_width = new_width;
                 window->windowState.buffer_height = new_height;
 
+                // Clear new buffer with base color
                 for (unsigned int i = 0; i < new_width * new_height; i++)
                 {
                     window->windowState.buffer[i] = window->win_base_color;
                 }
 
                 MakeBMI(window, &window->windowState.bmi, new_height, new_width);
+
             }
         }
         break;
@@ -441,19 +412,6 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     }
     return 0;
 }
-// CGIBool CGIInitialize(char *output_buffer, char *input_buffer)
-// {
-
-//     if (!output_buffer || !input_buffer)
-//         return CGI_false;
-
-//     if (strlen(output_buffer) == 0 || strlen(input_buffer) == 0)
-//         return CGI_true;
-//     AllocConsole();
-//     freopen(output_buffer, "w", stdout);
-
-//     return CGI_true;
-// }
 
 CGIPoint CGIGetCursorPoint()
 {
@@ -465,6 +423,179 @@ CGIPoint CGIGetCursorPoint()
 
     return ret;
 }
+
+// CGIBool initialize_OpenGL(CGIWindow *window)
+// {
+//     window->glState.hdc = (HDC)CGIQueryWindow(CGI_query_window_internal_win32_HDC, window);
+
+//     window->glState.pfd.nVersion = 1;
+//     window->glState.pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+//     window->glState.pfd.iPixelType = PFD_TYPE_RGBA;
+//     window->glState.pfd.iLayerType = PFD_MAIN_PLANE;
+//     window->glState.pfd.dwFlags = PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW | PFD_DOUBLEBUFFER;
+//     window->glState.pfd.cColorBits = 32;
+
+//     window->glState.pf = ChoosePixelFormat(window->glState.hdc, &window->glState.pfd);
+
+//     if (!SetPixelFormat(window->glState.hdc, window->glState.pf, &window->glState.pfd))
+//     {
+//         return CGI_false;
+//     }
+
+//     window->glState.glrc = wglCreateContext(window->glState.hdc);
+//     wglMakeCurrent(window->glState.hdc, window->glState.glrc);
+
+//     // gladLoadGL();
+//     if (!gladLoadGL())
+//     {
+//         wglDeleteContext(window->glState.glrc);
+//         return CGI_false;
+//     }
+
+//     window->glState.v_m_el_size = 8;
+//     window->glState.vertices_mapped = (GLfloat *)malloc(window->glState.v_m_el_size * sizeof(GLfloat));
+//     window->glState.vertices_mapped[0] = -1.0f;
+//     window->glState.vertices_mapped[1] = -1.0f;
+//     window->glState.vertices_mapped[2] = 1.0f;
+//     window->glState.vertices_mapped[3] = -1.0f;
+//     window->glState.vertices_mapped[4] = -1.0f;
+//     window->glState.vertices_mapped[5] = 1.0f;
+//     window->glState.vertices_mapped[6] = 1.0f;
+//     window->glState.vertices_mapped[7] = 1.0f;
+
+//     window->glState.i_m_el_size = 6;
+//     window->glState.indices = (GLuint *)malloc(window->glState.i_m_el_size * sizeof(GLuint));
+//     window->glState.indices[0] = 0;
+//     window->glState.indices[1] = 1;
+//     window->glState.indices[2] = 2;
+//     window->glState.indices[3] = 1;
+//     window->glState.indices[4] = 2;
+//     window->glState.indices[5] = 3;
+
+//     window->glState.tc_m_el_size = window->glState.v_m_el_size;
+//     window->glState.texture_cord_mapped = (GLfloat *)malloc(window->glState.tc_m_el_size * sizeof(GLfloat));
+//     window->glState.texture_cord_mapped[0] = 0.0f;
+//     window->glState.texture_cord_mapped[1] = 1.0f;
+//     window->glState.texture_cord_mapped[2] = 1.0f;
+//     window->glState.texture_cord_mapped[3] = 1.0f;
+//     window->glState.texture_cord_mapped[4] = 0.0f;
+//     window->glState.texture_cord_mapped[5] = 0.0f;
+//     window->glState.texture_cord_mapped[6] = 1.0f;
+//     window->glState.texture_cord_mapped[7] = 0.0f;
+
+//     glGenVertexArrays(1, &window->glState.vao);
+//     glBindVertexArray(window->glState.vao);
+
+//     glGenBuffers(1, &window->glState.vbo);
+//     glBindBuffer(GL_ARRAY_BUFFER, window->glState.vbo);
+//     glBufferData(GL_ARRAY_BUFFER, window->glState.v_m_el_size * sizeof(GLfloat), window->glState.vertices_mapped, GL_STATIC_DRAW);
+
+//     glEnableVertexAttribArray(0);
+//     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (void *)0);
+
+//     glGenBuffers(1, &window->glState.ebo);
+//     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, window->glState.ebo);
+//     glBufferData(GL_ELEMENT_ARRAY_BUFFER, window->glState.i_m_el_size * sizeof(GLuint), window->glState.indices, GL_STATIC_DRAW);
+
+//     glGenBuffers(1, &window->glState.texCord_bo);
+//     glBindBuffer(GL_ARRAY_BUFFER, window->glState.texCord_bo);
+//     glBufferData(GL_ARRAY_BUFFER, window->glState.tc_m_el_size * sizeof(GLfloat), window->glState.texture_cord_mapped, GL_STATIC_DRAW);
+//     glEnableVertexAttribArray(1);
+//     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (void *)0);
+
+//     int buffer_width = window->windowState.buffer_width;
+//     int buffer_height = window->windowState.buffer_height;
+
+//     glGenTextures(1, &window->glState.texture);
+//     glBindTexture(GL_TEXTURE_2D, window->glState.texture);
+//     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, buffer_width, buffer_height, 0, GL_BGR, GL_UNSIGNED_BYTE, NULL);
+//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+//     // glGenerateMipmap(GL_TEXTURE_2D);
+
+//     glGenBuffers(1, &window->glState.pbo);
+//     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, window->glState.pbo);
+//     glBufferData(GL_PIXEL_UNPACK_BUFFER, buffer_width * buffer_height * sizeof(COLORREF), NULL, GL_STREAM_DRAW);
+
+//     GLint result;
+//     window->glState.vertexShaderSRC = readShaderFile("src/shaders/vertexShader.glsl");
+//     window->glState.fragmentShaderSRC = readShaderFile("src/shaders/fragmentShader.glsl");
+
+//     window->glState.vertexShader = glCreateShader(GL_VERTEX_SHADER);
+//     glShaderSource(window->glState.vertexShader, 1, (const GLchar *const *)&window->glState.vertexShaderSRC, NULL);
+//     glCompileShader(window->glState.vertexShader);
+
+//     glGetShaderiv(window->glState.vertexShader, GL_COMPILE_STATUS, &result);
+//     if (result == GL_FALSE)
+//     {
+//         return CGI_false;
+//     }
+
+//     window->glState.fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+//     glShaderSource(window->glState.fragmentShader, 1, (const GLchar *const *)&window->glState.fragmentShaderSRC, NULL);
+//     glCompileShader(window->glState.fragmentShader);
+
+//     glGetShaderiv(window->glState.fragmentShader, GL_COMPILE_STATUS, &result);
+
+//     if (result == GL_FALSE)
+//     {
+//         // printf("failed");
+//         return CGI_false;
+//     }
+
+//     window->glState.shaderProgram = glCreateProgram();
+//     glAttachShader(window->glState.shaderProgram, window->glState.vertexShader);
+//     glAttachShader(window->glState.shaderProgram, window->glState.fragmentShader);
+//     glLinkProgram(window->glState.shaderProgram);
+
+//     glGetProgramiv(window->glState.shaderProgram, GL_LINK_STATUS, &result);
+//     if (result == GL_FALSE)
+//         return CGI_false;
+
+//     glDeleteShader(window->glState.vertexShader);
+//     glDeleteShader(window->glState.fragmentShader);
+
+//     float r = (float)window->base_color.r / 255;
+//     float g = (float)window->base_color.g / 255;
+//     float b = (float)window->base_color.b / 255;
+
+//     glClearColor(r, g, b, 1.0f);
+//     glUseProgram(window->glState.shaderProgram);
+//     glBindVertexArray(window->glState.vao);
+//     return CGI_true;
+// }
+
+// CGIBool Opengl_render(CGIWindow *window)
+// {
+
+//     // glBindTexture(GL_TEXTURE_2D,window->glState.texture);
+//     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, window->glState.pbo);
+
+//     GLubyte *ptr = (GLubyte *)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, window->windowState.buffer_width * window->windowState.buffer_height * sizeof(COLORREF), GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_WRITE_BIT);
+
+//     if (ptr)
+//     {
+//         memcpy(ptr, window->windowState.buffer, window->windowState.buffer_height * window->windowState.buffer_width * sizeof(COLORREF));
+//         glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+//     }
+//     else
+//         return CGI_false;
+
+//     // glBindBuffer(GL_PIXEL_UNPACK_BUFFER,window->glState.pbo);
+//     glBindTexture(GL_TEXTURE_2D, window->glState.texture);
+//     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, window->windowState.buffer_width, window->windowState.buffer_height, GL_BGRA, GL_UNSIGNED_BYTE, 0);
+
+//     glDrawElements(GL_TRIANGLES, window->glState.i_m_el_size, GL_UNSIGNED_INT, 0);
+
+//     SwapBuffers(window->glState.hdc);
+//     // printf("Drawing via opengl swap");
+
+//     return CGI_true;
+// }
+// #endif
 
 CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_pos, unsigned int y_pos, unsigned int width, unsigned int height, CGIColor_t color)
 {
@@ -569,13 +700,11 @@ CGIBool CGIRefreshBuffer(CGIWindow *window)
     return CGI_true;
 }
 
-CGIBool CGIBufferClear(CGIWindow *window, CGIColor_t color)
+CGIBool CGIClearBuffer(CGIWindow *window, CGIColor_t color)
 {
     if (!window)
         return CGI_false;
 
-    // int height = window->windowState.buffer_height;
-    // int width = window->windowState.buffer_width;
     int size = window->windowState.buffer_height * window->windowState.buffer_width;
     for (int i = 0; i < size; i++)
     {
@@ -590,7 +719,6 @@ CGIBool CGIRefreshWindow(CGIWindow *window)
         return CGI_false;
     if (window->open == CGI_false)
     {
-        // printf("error !! cannot refresh an uncreated window. ptrAddress: %p", window);
         return CGI_false;
     }
     while (PeekMessageA(&window->windowState.msg, NULL, 0, 0, PM_REMOVE))
@@ -603,7 +731,7 @@ CGIBool CGIRefreshWindow(CGIWindow *window)
         TranslateMessage(&window->windowState.msg);
         DispatchMessageA(&window->windowState.msg);
     }
-    CGIRefreshBuffer(window);
+    // CGIRefreshBuffer(window);
     return CGI_true;
 }
 
@@ -623,11 +751,11 @@ const void *CGIQueryWindow(CGIQuery query, CGIWindow *window)
     {
     case CGI_query_window_internal_win32_HWND:
     {
-        return window->windowState.hwnd;
+        return &window->windowState.hwnd;
     }
     case CGI_query_window_internal_win32_HDC:
     {
-        return window->windowState.hdc;
+        return &window->windowState.hdc;
     }
     case CGI_query_window_internal_win32_BITMAPINFO:
     {
@@ -639,7 +767,7 @@ const void *CGIQueryWindow(CGIQuery query, CGIWindow *window)
     }
     case CGI_query_window_name:
     {
-        return window->window_name;
+        return &window->window_name;
     }
     case CGI_query_window_height:
     {
@@ -696,17 +824,3 @@ CGIBool CGIIsWindowFocused(CGIWindow *window)
     return CGI_false;
 }
 
-// void CGIShowInfoDialogBox(CGIValue type, char *header, char *message)
-// {
-//     UINT info = 0;
-//     if (type == CGI_Dialog_error)
-//     {
-//         info |= MB_ICONERROR;
-//     }
-//     else if (type == CGI_Dialog_info)
-//     {
-//         info |= MB_ICONEXCLAMATION;
-//     }
-//     MessageBoxA(NULL, message, header, info);
-//     return;
-// }

@@ -1,2 +1,7 @@
+.vscode/
 *.exe
 *.o
+shaders/
+opengl.c
+opengl.h
+include/opengl/
