@@ -1,76 +1,61 @@
 #include "cgi.h"
-#include <stdio.h>
-#include <stdlib.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#elif __linux__
-#include <X11/Xlib.h>
-#endif
+struct ball{
+    float x_pos;
+    float y_pos;
+    int width;
+    int height;
+    float velocity;
+    float acceleration;
+    CGIColor_t color;
+};
 
-int main() {
-    // 1️⃣ Create a window
-    CGIWindow* win = CGICreateWindow(
-        "CGIWindow", "Rainbow Square Demo",
-        100, 100, 600, 400,
-        CGIMakeColor(0,0,0)  // black background
-    );
+int main(){
 
-    if (!win) {
-        printf("Failed to create window!\n");
-        return 1;
-    }
+    CGI* cgi = CGIStart();
 
-    CGIShowWindow(win);
+    CGIWindow* window = CGICreateWindow("mywindow","mywindow",0,0,500,500,CGIMakeColor(100,23,123));
 
-    // 2️⃣ Initial position of the square
-    int x = 300, y = 200;
-    int size = 50;
-    CGIColor_t color = CGIMakeColor(255,0,0);
+    struct ball ball;
+    ball.x_pos=0;
+    ball.y_pos=0;
+    ball.acceleration=0.002;
+    ball.velocity=0;
+    ball.width=40;
+    ball.height = 40;
+    ball.color = CGIMakeColor(0,0,0);
 
-    while (CGIIsWindowOpen(win)) {
-        // Clear the window
-        // CGIRefreshWindow(win);
-        CGIBufferClear(win, CGIMakeColor(0,0,0));
+    CGIShowWindow(window);
 
-        // Draw a rainbow square
-        for(int i=0;i<size;i++) {
-            for(int j=0;j<size;j++) {
-                color.r = (x+i) % 256;
-                color.g = (y+j) % 256;
-                color.b = (i+j) % 256;
-                CGISetPixel(win, x+i, y+j, color);
+    CGIBool bounce = CGI_false;
+
+    while(CGIIsWindowOpen(window)){
+        CGIRefreshWindow(window);
+        CGIClearBuffer(window,CGIMakeColor(100,23,45));
+        
+        
+        for(int i=ball.y_pos;i<ball.y_pos+ball.height;i++){
+            for(int j=ball.x_pos;j<ball.x_pos+ball.width;j++){
+                CGISetPixel(window,j,i,ball.color);
             }
         }
+        
+        
+        CGIRefreshBuffer(window);
 
-        CGIRefreshWindow(win);
-
-        // 3️⃣ Handle arrow keys
-        if(CGIIsKeyPressed(win, CGI_input_key_up))    y -= 5;
-        if(CGIIsKeyPressed(win, CGI_input_key_down))  y += 5;
-        if(CGIIsKeyPressed(win, CGI_input_key_left))  x -= 5;
-        if(CGIIsKeyPressed(win, CGI_input_key_right)) x += 5;
-
-        // 4️⃣ Handle scroll (optional)
-#ifdef _WIN32
-        if(CGIIsKeyPressed(win, CGI_input_key_space)) size += 2; // space increases size
-#elif __linux__
-        // scroll events handled inside CGI if implemented
-#endif
-
-        // Keep inside window bounds
-        if(x<0) x=0;
-        if(y<0) y=0;
-        if(x>*(int*)CGIQueryWindow(CGI_query_window_buffer_width, win)-size) x=*(int*)CGIQueryWindow(CGI_query_window_buffer_width, win)-size;
-        if(y>*(int*)CGIQueryWindow(CGI_query_window_buffer_height, win)-size) y=*(int*)CGIQueryWindow(CGI_query_window_buffer_height, win)-size;
-
-#ifdef _WIN32
-        Sleep(16); // ~60 FPS
-#else
-        usleep(16000);
-#endif
+        
+        if(ball.y_pos+ball.height>=500 ){
+            ball.acceleration=-ball.velocity;
+            ball.velocity=0;
+            // ball.y_pos+=ball.velocity;
+            // bounce = CGI_true;
+        }else{
+            
+        }
+        ball.velocity+=ball.acceleration;
+        ball.y_pos+=ball.velocity;
     }
 
-    CGIWindowCleanup(win);
-    return 0;
+
+
 }
