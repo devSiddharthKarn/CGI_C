@@ -171,8 +171,6 @@ CGI *CGIStart()
     // Fix: GetAsyncKeyState returns non-zero if pressed, convert to boolean
     cgi->Cursor.l_button_pressed = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) ? CGI_true : CGI_false;
     cgi->Cursor.r_button_pressed = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) ? CGI_true : CGI_false;
-    cgi->Cursor.scroll_delta = 0;
-    cgi->Cursor.is_scrolling = CGI_false;
 
     return cgi;
 }
@@ -189,8 +187,6 @@ CGIBool CGIUpdate(CGI *cgi)
 
     cgi->Cursor.l_button_pressed = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) ? CGI_true : CGI_false;
     cgi->Cursor.r_button_pressed = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) ? CGI_true : CGI_false;
-    cgi->Cursor.scroll_delta = 0;
-    cgi->Cursor.is_scrolling = CGI_false;
 
     return CGI_true;
 }
@@ -250,6 +246,10 @@ struct CGIWindow
     unsigned int height;
     COLORREF win_base_color;
     CGIColor_t base_color;
+    float scroll_delta_x;
+    float scroll_delta_y;
+    CGIBool is_scrolled_x;
+    CGIBool is_scrolled_y;
     CGIBool open;
     CGIBool focused;
 };
@@ -470,6 +470,19 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         break;
     }
 
+    case WM_MOUSEWHEEL:{
+        int delta = GET_WHEEL_DELTA_WPARAM(wp);
+        window->scroll_delta_y = (float)delta/120;
+        window->is_scrolled_y=CGI_true;
+        break;
+    }
+    case WM_MOUSEHWHEEL:{
+        int delta = GET_WHEEL_DELTA_WPARAM(wp);
+        window->scroll_delta_x = (float)delta/120;
+        window->is_scrolled_x=CGI_true;
+        break;
+    }
+
     case WM_DESTROY:
     {
         if (!window)
@@ -511,6 +524,10 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
     window->base_color = color;
     window->open = CGI_false;
     window->focused = CGI_false;
+    window->is_scrolled_x=CGI_false;
+    window->scroll_delta_x=0;
+    window->is_scrolled_y=CGI_false;
+    window->scroll_delta_y=0;
 
     // Handle OS level setup
     ZeroMemory(&window->windowState.wc, sizeof(WNDCLASSA));
@@ -581,6 +598,8 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
         return NULL;
     }
 
+    
+
     return window;
 }
 
@@ -612,6 +631,12 @@ void internal_window_basic_update(CGIWindow *window)
     window->cursor.y = point.y;
 
     window->focused = CGIIsWindowFocused(window);
+
+    window->is_scrolled_x=CGI_false;
+    window->scroll_delta_x=0;
+    window->is_scrolled_y=CGI_false;
+    window->scroll_delta_y=0;
+    
 }
 
 CGIBool CGIShowWindow(CGIWindow *window)
@@ -679,6 +704,7 @@ CGIBool CGIRefreshWindow(CGIWindow *window)
         return CGI_false;
     }
 
+    internal_window_basic_update(window);
     while (PeekMessageA(&window->windowState.msg, NULL, 0, 0, PM_REMOVE))
     {
         if (window->windowState.msg.message == WM_QUIT)
@@ -691,7 +717,6 @@ CGIBool CGIRefreshWindow(CGIWindow *window)
     }
 
     // Update window states
-    internal_window_basic_update(window);
     return CGI_true;
 }
 
@@ -802,13 +827,26 @@ const void *CGIPerformQuery(CGIQuery query, CGI *cgi, CGIWindow *window)
             if (!cgi) return NULL;
             return &cgi->Cursor.r_button_pressed;
 
-        case CGI_query_system_scroll_delta:
-            if (!cgi) return NULL;
-            return &cgi->Cursor.scroll_delta;
+        case CGI_query_window_scroll_delta_x:
+            if (!window) return NULL;
+            return &window->scroll_delta_x;
 
-        case CGI_query_system_is_scrolling:
-            if (!cgi) return NULL;
-            return &cgi->Cursor.is_scrolling;
+        
+        case CGI_query_window_scroll_delta_y:
+        {
+            if(!window) return NULL;
+            return &window->scroll_delta_y;
+        }
+        
+
+        case CGI_query_window_is_scrolled_x:
+            if (!window) return NULL;
+            return &window->is_scrolled_x;
+
+        case CGI_query_window_is_scrolled_y:{
+            if(!window) return NULL;
+            return &window->is_scrolled_y;
+        }
 
         default:
             printf("CGIPerformQuery: unhandled query %d\n", query);

@@ -55,8 +55,7 @@ struct  CGI
         CGIPoint cursor_position;
         CGIBool l_button_pressed;
         CGIBool r_button_pressed;
-        int scroll_delta;
-        CGIBool is_scrolling;
+        
     } Cursor;
 
 };
@@ -77,6 +76,10 @@ typedef enum
     CGI_query_window_open_status,
     CGI_query_window_cursor_position,
     CGI_query_window_focus_status,
+    CGI_query_window_scroll_delta_x,
+    CGI_query_window_scroll_delta_y,
+    CGI_query_window_is_scrolled_x,
+    CGI_query_window_is_scrolled_y,
 
 
     CGI_query_system_display_width,
@@ -87,8 +90,7 @@ typedef enum
     CGI_query_system_cursor_position,
     CGI_query_system_l_button_pressed,
     CGI_query_system_r_button_pressed,
-    CGI_query_system_scroll_delta,
-    CGI_query_system_is_scrolling,
+    
 
     
 

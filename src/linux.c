@@ -27,11 +27,10 @@ CGI *CGIStart()
 
     cgi->Display.width = DisplayWidth(display, screen);
     cgi->Display.height = DisplayHeight(display, screen);
-    cgi->Display.physical_height= DisplayHeightMM(display,screen);
-    cgi->Display.physical_width = DisplayWidthMM(display,screen);
+    cgi->Display.physical_height = DisplayHeightMM(display, screen);
+    cgi->Display.physical_width = DisplayWidthMM(display, screen);
 
-    //refresh rate handle remaining
-
+    // refresh rate handle remaining
 
     Window root_window, child_window;
     unsigned int mask;
@@ -44,8 +43,6 @@ CGI *CGIStart()
 
     cgi->Cursor.l_button_pressed = CGI_false;
     cgi->Cursor.r_button_pressed = CGI_false;
-    cgi->Cursor.scroll_delta = 0;
-    cgi->Cursor.is_scrolling = CGI_false;
 
     return cgi;
 }
@@ -71,18 +68,24 @@ CGIBool CGIUpdate(CGI *cgi)
                   &cgi->Cursor.cursor_position.x, &cgi->Cursor.cursor_position.y,
                   &root_x, &root_y, &mask);
 
-    if(mask & Button1Mask){
-        
-        cgi->Cursor.l_button_pressed=CGI_true;
-    }else{
-        cgi->Cursor.l_button_pressed=CGI_false;
+    if (mask & Button1Mask)
+    {
+
+        cgi->Cursor.l_button_pressed = CGI_true;
+    }
+    else
+    {
+        cgi->Cursor.l_button_pressed = CGI_false;
     }
 
-    if(mask & Button3Mask){
+    if (mask & Button3Mask)
+    {
         // printf("pressed right");
-        cgi->Cursor.l_button_pressed=CGI_true;
-    }else{
-        cgi->Cursor.r_button_pressed=CGI_false;
+        cgi->Cursor.l_button_pressed = CGI_true;
+    }
+    else
+    {
+        cgi->Cursor.r_button_pressed = CGI_false;
     }
 
     XCloseDisplay(display);
@@ -131,9 +134,54 @@ struct CGIWindow
     struct CGIFrameBuffer buffer;
     unsigned int buffer_width;
     unsigned int buffer_height;
+    float scroll_delta_x;
+    float scroll_delta_y;
+    CGIBool is_scrolled_x;
+    CGIBool is_scrolled_y;
     CGIBool open;
     CGIBool focused;
 };
+
+void setup_scroll_in_window(CGIWindow *window, XEvent *e)
+{
+    if (e->type == ButtonPress)
+    {
+        switch (e->xbutton.button)
+        {
+        case 4:
+        {
+            window->scroll_delta_y = 1;
+            window->is_scrolled_y = CGI_true;
+            break;
+        }
+        case 5:
+        {
+            window->scroll_delta_y = -1;
+            window->is_scrolled_y = CGI_true;
+            break;
+        }
+        case 6:
+        {
+            window->scroll_delta_x = -1;
+            window->is_scrolled_x = CGI_true;
+            break;
+        }
+        case 7:
+        {
+            window->scroll_delta_x = 1;
+            window->is_scrolled_x = CGI_true;
+            break;
+        }
+        default:
+        {
+
+            break;
+        }
+        }
+    }
+
+    return;
+}
 
 CGIColor_t CGIMakeColor(unsigned char r, unsigned char g, unsigned char b)
 {
@@ -468,8 +516,6 @@ void set_window_display_attrs(CGIWindow *window)
 
     XQueryPointer(window->windowState.display, window->windowState.window, &root_window, &child_window, &root_x, &root_y, &win_x, &win_y, &mask);
 
-    
-
     window->cursor.x = win_x;
     window->cursor.y = win_y;
 
@@ -516,8 +562,6 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
     window->windowState.base_color = xcolor;
     window->CGIbase_color = color;
 
-    
-
     window->windowState.window = XCreateSimpleWindow(window->windowState.display, RootWindow(window->windowState.display, window->windowState.screen), x_pos, y_pos, width, height, 1, BlackPixel(window->windowState.display, window->windowState.screen), xcolor.pixel);
 
     if (!window->windowState.window)
@@ -552,11 +596,14 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
 
     CGIClearBuffer(window, color);
     window->open = CGI_false;
-    window->focused=CGI_false;
+    window->focused = CGI_false;
+    window->is_scrolled_x = CGI_false;
+    window->is_scrolled_y = CGI_false;
+    window->scroll_delta_x = 0;
+    window->scroll_delta_y = 0;
 
     return window;
 }
-
 
 CGIBool CGIIsWindowFocused(CGIWindow *window)
 {
@@ -566,8 +613,6 @@ CGIBool CGIIsWindowFocused(CGIWindow *window)
     int revert;
     Window win;
     XGetInputFocus(window->windowState.display, &win, &revert);
-
-    
 
     if (win == window->windowState.window)
     {
@@ -611,8 +656,6 @@ CGIBool CGICloseWindow(CGIWindow *window)
     return CGI_true;
 }
 
-
-
 void process_events(CGIWindow *window, XEvent *event)
 {
     if (!window)
@@ -650,12 +693,18 @@ void process_events(CGIWindow *window, XEvent *event)
     default:
         break;
     }
+
+    setup_scroll_in_window(window, event);
 }
 
-void internal_window_basic_update(CGIWindow* window){
+void internal_window_basic_update(CGIWindow *window)
+{
     set_window_display_attrs(window);
     window->focused = CGIIsWindowFocused(window);
-
+    window->scroll_delta_x = 0;
+    window->scroll_delta_y = 0;
+    window->is_scrolled_x = CGI_false;
+    window->is_scrolled_y = CGI_false;
 }
 
 CGIBool CGIRefreshWindow(CGIWindow *window)
@@ -667,10 +716,8 @@ CGIBool CGIRefreshWindow(CGIWindow *window)
     while (XPending(window->windowState.display))
     {
         XNextEvent(window->windowState.display, &window->windowState.event);
-        process_events(window,&window->windowState.event);
+        process_events(window, &window->windowState.event);
     }
-
-
 
     return CGI_true;
 }
@@ -678,121 +725,167 @@ const void *CGIPerformQuery(CGIQuery query, CGI *cgi, CGIWindow *window)
 {
     switch (query)
     {
-        // ---------------- Window-related queries ----------------
-        case CGI_query_window_name:{
-            if(!window) return NULL;
-            return &window->name;
-        }
-        case CGI_query_window_cursor_position:
-            if (!window) return NULL;
-            return &window->cursor;
+    // ---------------- Window-related queries ----------------
+    case CGI_query_window_name:
+    {
+        if (!window)
+            return NULL;
+        return &window->name;
+    }
+    case CGI_query_window_cursor_position:
+        if (!window)
+            return NULL;
+        return &window->cursor;
 
-        case CGI_query_window_width:
-            if (!window) return NULL;
-            return &window->width;
+    case CGI_query_window_width:
+        if (!window)
+            return NULL;
+        return &window->width;
 
-        case CGI_query_window_height:
-            if (!window) return NULL;
-            return &window->height;
+    case CGI_query_window_height:
+        if (!window)
+            return NULL;
+        return &window->height;
 
-        case CGI_query_window_buffer_width:
-            if (!window) return NULL;
-            return &window->buffer_width;
+    case CGI_query_window_buffer_width:
+        if (!window)
+            return NULL;
+        return &window->buffer_width;
 
-        case CGI_query_window_buffer_height:
-            if (!window) return NULL;
-            return &window->buffer_height;
+    case CGI_query_window_buffer_height:
+        if (!window)
+            return NULL;
+        return &window->buffer_height;
 
-        case CGI_query_window_position:
-            if (!window) return NULL;
-            return &window->position;
+    case CGI_query_window_position:
+        if (!window)
+            return NULL;
+        return &window->position;
 
-        case CGI_query_window_open_status:
-            if (!window) return NULL;
-            return &window->open;
+    case CGI_query_window_open_status:
+        if (!window)
+            return NULL;
+        return &window->open;
 
-        case CGI_query_window_base_color:
-            if (!window) return NULL;
-            return &window->CGIbase_color;
+    case CGI_query_window_base_color:
+        if (!window)
+            return NULL;
+        return &window->CGIbase_color;
 
-        case CGI_query_window_focus_status:
-            if (!window) return NULL;
-            return &window->focused;
+    case CGI_query_window_focus_status:
+        if (!window)
+            return NULL;
+        return &window->focused;
 
-        // ---------------- System/CGI-related queries ----------------
-        case CGI_query_system_cursor_position:
-            if (!cgi) return NULL;
-            return &cgi->Cursor.cursor_position;
+    // ---------------- System/CGI-related queries ----------------
+    case CGI_query_system_cursor_position:
+        if (!cgi)
+            return NULL;
+        return &cgi->Cursor.cursor_position;
 
-        case CGI_query_system_display_height:
-            if (!cgi) return NULL;
-            return &cgi->Display.height;
+    case CGI_query_system_display_height:
+        if (!cgi)
+            return NULL;
+        return &cgi->Display.height;
 
-        case CGI_query_system_display_width:
-            if (!cgi) return NULL;
-            return &cgi->Display.width;
-        
-        case CGI_query_system_display_physical_height:{
-            if(!cgi) return NULL;
-            return &cgi->Display.physical_height;
-        }
+    case CGI_query_system_display_width:
+        if (!cgi)
+            return NULL;
+        return &cgi->Display.width;
 
-        case CGI_query_system_display_physical_width:{
-            if(!cgi) return NULL;
-            return &cgi->Display.physical_width;
-        }
+    case CGI_query_system_display_physical_height:
+    {
+        if (!cgi)
+            return NULL;
+        return &cgi->Display.physical_height;
+    }
 
-        case CGI_query_system_display_refresh_rate:{
-            if(!cgi) return NULL;
-            return &cgi->Display.refresh_rate;
-        }
+    case CGI_query_system_display_physical_width:
+    {
+        if (!cgi)
+            return NULL;
+        return &cgi->Display.physical_width;
+    }
 
-        case CGI_query_system_is_scrolling:{
-            if(!cgi) return NULL;
-            return &cgi->Cursor.is_scrolling;
-        }
-        case CGI_query_system_l_button_pressed:{
-            if(!cgi) return NULL;
-            return &cgi->Cursor.l_button_pressed;
-        }
+    case CGI_query_system_display_refresh_rate:
+    {
+        if (!cgi)
+            return NULL;
+        return &cgi->Display.refresh_rate;
+    }
 
-        case CGI_query_system_r_button_pressed:{
-            if(!cgi) return NULL;
-            return &cgi->Cursor.r_button_pressed;
-        }
+    case CGI_query_window_is_scrolled_x:
+    {
+        if (!window)
+            return NULL;
+        return &window->is_scrolled_x;
+    }
+    case CGI_query_window_is_scrolled_y:
+    {
+        if (!window)
+            return NULL;
+        return &window->is_scrolled_y;
+    }
+    case CGI_query_system_l_button_pressed:
+    {
+        if (!cgi)
+            return NULL;
+        return &cgi->Cursor.l_button_pressed;
+    }
 
-        case CGI_query_system_scroll_delta:{
-            if(!cgi) return NULL;
-            return &cgi->Cursor.scroll_delta;
-        }
+    case CGI_query_system_r_button_pressed:
+    {
+        if (!cgi)
+            return NULL;
+        return &cgi->Cursor.r_button_pressed;
+    }
 
-        // ---------------- Linux Xlib-specific queries ----------------
-        case CGI_query_window_internal_linux_Xlib_DisplayPointer:
-            if (!window) return NULL;
-            return &window->windowState.display;
+    case CGI_query_window_scroll_delta_x:
+    {
+        if (!window)
+            return NULL;
+        return &window->scroll_delta_x;
+    }
+    case CGI_query_window_scroll_delta_y:
+    {
+        if (!window)
+            return NULL;
+        return &window->scroll_delta_y;
+    }
 
-        case CGI_query_window_internal_linux_Xlib_screen:
-            if (!window) return NULL;
-            return &window->windowState.screen;
+    // ---------------- Linux Xlib-specific queries ----------------
+    case CGI_query_window_internal_linux_Xlib_DisplayPointer:
+        if (!window)
+            return NULL;
+        return &window->windowState.display;
 
-        case CGI_query_window_internal_linux_Xlib_window:
-            if (!window) return NULL;
-            return &window->windowState.window;
+    case CGI_query_window_internal_linux_Xlib_screen:
+        if (!window)
+            return NULL;
+        return &window->windowState.screen;
 
-        case CGI_query_window_internal_linux_Xlib_colormap:
-            if (!window) return NULL;
-            return &window->windowState.colormap;
+    case CGI_query_window_internal_linux_Xlib_window:
+        if (!window)
+            return NULL;
+        return &window->windowState.window;
 
-        case CGI_query_window_internal_linux_Xlib_GC:
-            if (!window) return NULL;
-            return &window->windowState.gc;
+    case CGI_query_window_internal_linux_Xlib_colormap:
+        if (!window)
+            return NULL;
+        return &window->windowState.colormap;
 
-        case CGI_query_window_internal_linux_Xlib_type_base_color:
-            if (!window) return NULL;
-            return &window->windowState.base_color;
+    case CGI_query_window_internal_linux_Xlib_GC:
+        if (!window)
+            return NULL;
+        return &window->windowState.gc;
 
-        default:
-            break;
+    case CGI_query_window_internal_linux_Xlib_type_base_color:
+        if (!window)
+            return NULL;
+        return &window->windowState.base_color;
+
+    default:
+        break;
     }
     return NULL;
 }
