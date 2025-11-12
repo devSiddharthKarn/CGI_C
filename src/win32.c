@@ -6,7 +6,6 @@
 #include "string.h"
 #include "stdio.h"
 
-
 CGIColor_t CGIMakeColor(unsigned char r, unsigned char g, unsigned char b)
 {
     CGIColor_t color;
@@ -15,9 +14,6 @@ CGIColor_t CGIMakeColor(unsigned char r, unsigned char g, unsigned char b)
     color.b = b;
     return color;
 }
-
-
-
 
 int CGIKeyToWin32VKKey(CGIInputKey key)
 {
@@ -149,6 +145,64 @@ int CGIKeyToWin32VKKey(CGIInputKey key)
     return 0;
 }
 
+CGI *CGIStart()
+{
+    CGI *cgi = (CGI *)malloc(sizeof(CGI));
+    if (!cgi)
+        return NULL;
+
+    DEVMODEA devmode;
+    EnumDisplaySettingsA(NULL, ENUM_CURRENT_SETTINGS, &devmode);
+    cgi->Display.width = devmode.dmPelsWidth;
+    cgi->Display.height = devmode.dmPelsHeight;
+    cgi->Display.refresh_rate = devmode.dmDisplayFrequency;
+
+    // Get physical display dimensions
+    HDC screen_dc = GetDC(NULL);
+    cgi->Display.physical_width = GetDeviceCaps(screen_dc, HORZSIZE);
+    cgi->Display.physical_height = GetDeviceCaps(screen_dc, VERTSIZE);
+    ReleaseDC(NULL, screen_dc);
+
+    POINT point;
+    GetCursorPos(&point);
+    cgi->Cursor.cursor_position.x = point.x;
+    cgi->Cursor.cursor_position.y = point.y;
+
+    // Fix: GetAsyncKeyState returns non-zero if pressed, convert to boolean
+    cgi->Cursor.l_button_pressed = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) ? CGI_true : CGI_false;
+    cgi->Cursor.r_button_pressed = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) ? CGI_true : CGI_false;
+    cgi->Cursor.scroll_delta = 0;
+    cgi->Cursor.is_scrolling = CGI_false;
+
+    return cgi;
+}
+
+CGIBool CGIUpdate(CGI *cgi)
+{
+    if (!cgi)
+        return CGI_false;
+
+    POINT point;
+    GetCursorPos(&point);
+    cgi->Cursor.cursor_position.x = point.x;
+    cgi->Cursor.cursor_position.y = point.y;
+
+    cgi->Cursor.l_button_pressed = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) ? CGI_true : CGI_false;
+    cgi->Cursor.r_button_pressed = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) ? CGI_true : CGI_false;
+    cgi->Cursor.scroll_delta = 0;
+    cgi->Cursor.is_scrolling = CGI_false;
+
+    return CGI_true;
+}
+
+CGIBool CGIEnd(CGI *cgi)
+{
+    if (!cgi)
+        return CGI_false;
+    free(cgi);
+    return CGI_true;
+}
+
 CGIBool CGIIsKeyPressed(CGIWindow *window, CGIInputKey key)
 {
     int vk_key = CGIKeyToWin32VKKey(key);
@@ -169,13 +223,6 @@ CGIBool CGIIsKeyPressed(CGIWindow *window, CGIInputKey key)
     }
 }
 
-struct SYSDISPLAY
-{
-    unsigned int width;
-    unsigned int height;
-    CGIPoint cursor;
-};
-
 struct WindowState
 {
     HWND hwnd;
@@ -194,21 +241,36 @@ struct WindowState
 
 struct CGIWindow
 {
+    CGI *cgi;
     struct WindowState windowState;
     char *window_name;
     CGIPoint position;
-    struct SYSDISPLAY display;
+    CGIPoint cursor;
     unsigned int width;
     unsigned int height;
     COLORREF win_base_color;
     CGIColor_t base_color;
     CGIBool open;
+    CGIBool focused;
 };
 
 CGIBool CGIWindowCleanup(CGIWindow *window)
 {
     if (!window)
         return CGI_false;
+
+    if (window->windowState.hBitMap)
+    {
+        DeleteObject(window->windowState.hBitMap);
+        window->windowState.hBitMap = NULL;
+    }
+
+    if (window->windowState.offscreenBuffer)
+    {
+        DeleteDC(window->windowState.offscreenBuffer);
+        window->windowState.offscreenBuffer = NULL;
+    }
+
     if (window->windowState.hwnd)
     {
         if (window->windowState.hdc)
@@ -220,17 +282,6 @@ CGIBool CGIWindowCleanup(CGIWindow *window)
         DestroyWindow(window->windowState.hwnd);
         UnregisterClassA(window->windowState.wc.lpszClassName, window->windowState.wc.hInstance);
         window->windowState.hwnd = NULL;
-    }
-
-    if (window->windowState.hBitMap)
-    {
-        DeleteObject(window->windowState.hBitMap);
-        window->windowState.hBitMap = NULL;
-    }
-    if (window->windowState.offscreenBuffer)
-    {
-        DeleteDC(window->windowState.offscreenBuffer);
-        window->windowState.offscreenBuffer = NULL;
     }
 
     if (window->window_name)
@@ -254,20 +305,22 @@ CGIBool MakeBMI(CGIWindow *window, BITMAPINFO *bmi, unsigned int height, unsigne
 {
     if (bmi == NULL || window == NULL)
         return CGI_false;
+
     ZeroMemory(bmi, sizeof(BITMAPINFO));
     bmi->bmiHeader.biBitCount = 24;
     bmi->bmiHeader.biCompression = BI_RGB;
-    bmi->bmiHeader.biHeight = -height; // top down view + is bottom up view;
+    bmi->bmiHeader.biHeight = -(int)height; // top down view
     bmi->bmiHeader.biPlanes = 1;
     bmi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     bmi->bmiHeader.biWidth = width;
 
     if (window->windowState.hBitMap)
     {
-        SelectObject(window->windowState.offscreenBuffer, GetStockObject(NULL_BRUSH)); // deselect
+        SelectObject(window->windowState.offscreenBuffer, GetStockObject(NULL_BRUSH));
         DeleteObject(window->windowState.hBitMap);
         window->windowState.hBitMap = NULL;
     }
+
     if (window->windowState.offscreenBuffer)
     {
         DeleteDC(window->windowState.offscreenBuffer);
@@ -275,9 +328,20 @@ CGIBool MakeBMI(CGIWindow *window, BITMAPINFO *bmi, unsigned int height, unsigne
     }
 
     window->windowState.offscreenBuffer = CreateCompatibleDC(window->windowState.hdc);
+    if (!window->windowState.offscreenBuffer)
+        return CGI_false;
 
-    window->windowState.hBitMap = CreateDIBSection(window->windowState.offscreenBuffer, &window->windowState.bmi, DIB_RGB_COLORS, &window->windowState.pixelbuffer, NULL, 0);
-
+    window->windowState.hBitMap = CreateDIBSection(window->windowState.offscreenBuffer,
+                                                   &window->windowState.bmi,
+                                                   DIB_RGB_COLORS,
+                                                   &window->windowState.pixelbuffer,
+                                                   NULL, 0);
+    if (!window->windowState.hBitMap)
+    {
+        DeleteDC(window->windowState.offscreenBuffer);
+        window->windowState.offscreenBuffer = NULL;
+        return CGI_false;
+    }
 
     SelectObject(window->windowState.offscreenBuffer, window->windowState.hBitMap);
 
@@ -319,6 +383,7 @@ CGIBool LoadBufferView(void *pixelBuffer, COLORREF *window_main_buffer,
 LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     CGIWindow *window = (CGIWindow *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+
     switch (msg)
     {
     case WM_NCCREATE:
@@ -326,11 +391,14 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         CREATESTRUCT *cs = (CREATESTRUCT *)lp;
         window = (CGIWindow *)cs->lpCreateParams;
         SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)window);
-        return TRUE;
+        return DefWindowProcA(hwnd, msg, wp, lp);
     }
 
     case WM_PAINT:
     {
+        if (!window)
+            return DefWindowProcA(hwnd, msg, wp, lp);
+
         BeginPaint(hwnd, &window->windowState.ps);
 
         LoadBufferView(window->windowState.pixelbuffer, window->windowState.buffer,
@@ -345,6 +413,9 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
     case WM_SIZE:
     {
+        if (!window)
+            return DefWindowProcA(hwnd, msg, wp, lp);
+
         RECT rect;
         GetClientRect(window->windowState.hwnd, &rect);
         unsigned int new_width = rect.right - rect.left;
@@ -361,10 +432,6 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             {
                 window->windowState.buffer = new_buffer;
 
-                // Store old dimensions
-                unsigned int old_width = window->windowState.buffer_width;
-                unsigned int old_height = window->windowState.buffer_height;
-
                 // Update to new dimensions
                 window->windowState.buffer_width = new_width;
                 window->windowState.buffer_height = new_height;
@@ -376,7 +443,6 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
 
                 MakeBMI(window, &window->windowState.bmi, new_height, new_width);
-
             }
         }
         break;
@@ -384,6 +450,9 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
     case WM_CLOSE:
     {
+        if (!window)
+            return DefWindowProcA(hwnd, msg, wp, lp);
+
         window->open = CGI_false;
         DestroyWindow(hwnd);
         return 0;
@@ -391,6 +460,9 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
     case WM_MOVE:
     {
+        if (!window)
+            return DefWindowProcA(hwnd, msg, wp, lp);
+
         RECT rect;
         GetWindowRect(window->windowState.hwnd, &rect);
         window->position.x = rect.left;
@@ -400,6 +472,9 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
     case WM_DESTROY:
     {
+        if (!window)
+            return DefWindowProcA(hwnd, msg, wp, lp);
+
         window->open = CGI_false;
         PostQuitMessage(0);
         return 0;
@@ -413,197 +488,21 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     return 0;
 }
 
-CGIPoint CGIGetCursorPoint()
-{
-    POINT point;
-    GetCursorPos(&point);
-    CGIPoint ret;
-    ret.x = point.x;
-    ret.y = point.y;
-
-    return ret;
-}
-
-// CGIBool initialize_OpenGL(CGIWindow *window)
-// {
-//     window->glState.hdc = (HDC)CGIQueryWindow(CGI_query_window_internal_win32_HDC, window);
-
-//     window->glState.pfd.nVersion = 1;
-//     window->glState.pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
-//     window->glState.pfd.iPixelType = PFD_TYPE_RGBA;
-//     window->glState.pfd.iLayerType = PFD_MAIN_PLANE;
-//     window->glState.pfd.dwFlags = PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW | PFD_DOUBLEBUFFER;
-//     window->glState.pfd.cColorBits = 32;
-
-//     window->glState.pf = ChoosePixelFormat(window->glState.hdc, &window->glState.pfd);
-
-//     if (!SetPixelFormat(window->glState.hdc, window->glState.pf, &window->glState.pfd))
-//     {
-//         return CGI_false;
-//     }
-
-//     window->glState.glrc = wglCreateContext(window->glState.hdc);
-//     wglMakeCurrent(window->glState.hdc, window->glState.glrc);
-
-//     // gladLoadGL();
-//     if (!gladLoadGL())
-//     {
-//         wglDeleteContext(window->glState.glrc);
-//         return CGI_false;
-//     }
-
-//     window->glState.v_m_el_size = 8;
-//     window->glState.vertices_mapped = (GLfloat *)malloc(window->glState.v_m_el_size * sizeof(GLfloat));
-//     window->glState.vertices_mapped[0] = -1.0f;
-//     window->glState.vertices_mapped[1] = -1.0f;
-//     window->glState.vertices_mapped[2] = 1.0f;
-//     window->glState.vertices_mapped[3] = -1.0f;
-//     window->glState.vertices_mapped[4] = -1.0f;
-//     window->glState.vertices_mapped[5] = 1.0f;
-//     window->glState.vertices_mapped[6] = 1.0f;
-//     window->glState.vertices_mapped[7] = 1.0f;
-
-//     window->glState.i_m_el_size = 6;
-//     window->glState.indices = (GLuint *)malloc(window->glState.i_m_el_size * sizeof(GLuint));
-//     window->glState.indices[0] = 0;
-//     window->glState.indices[1] = 1;
-//     window->glState.indices[2] = 2;
-//     window->glState.indices[3] = 1;
-//     window->glState.indices[4] = 2;
-//     window->glState.indices[5] = 3;
-
-//     window->glState.tc_m_el_size = window->glState.v_m_el_size;
-//     window->glState.texture_cord_mapped = (GLfloat *)malloc(window->glState.tc_m_el_size * sizeof(GLfloat));
-//     window->glState.texture_cord_mapped[0] = 0.0f;
-//     window->glState.texture_cord_mapped[1] = 1.0f;
-//     window->glState.texture_cord_mapped[2] = 1.0f;
-//     window->glState.texture_cord_mapped[3] = 1.0f;
-//     window->glState.texture_cord_mapped[4] = 0.0f;
-//     window->glState.texture_cord_mapped[5] = 0.0f;
-//     window->glState.texture_cord_mapped[6] = 1.0f;
-//     window->glState.texture_cord_mapped[7] = 0.0f;
-
-//     glGenVertexArrays(1, &window->glState.vao);
-//     glBindVertexArray(window->glState.vao);
-
-//     glGenBuffers(1, &window->glState.vbo);
-//     glBindBuffer(GL_ARRAY_BUFFER, window->glState.vbo);
-//     glBufferData(GL_ARRAY_BUFFER, window->glState.v_m_el_size * sizeof(GLfloat), window->glState.vertices_mapped, GL_STATIC_DRAW);
-
-//     glEnableVertexAttribArray(0);
-//     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (void *)0);
-
-//     glGenBuffers(1, &window->glState.ebo);
-//     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, window->glState.ebo);
-//     glBufferData(GL_ELEMENT_ARRAY_BUFFER, window->glState.i_m_el_size * sizeof(GLuint), window->glState.indices, GL_STATIC_DRAW);
-
-//     glGenBuffers(1, &window->glState.texCord_bo);
-//     glBindBuffer(GL_ARRAY_BUFFER, window->glState.texCord_bo);
-//     glBufferData(GL_ARRAY_BUFFER, window->glState.tc_m_el_size * sizeof(GLfloat), window->glState.texture_cord_mapped, GL_STATIC_DRAW);
-//     glEnableVertexAttribArray(1);
-//     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (void *)0);
-
-//     int buffer_width = window->windowState.buffer_width;
-//     int buffer_height = window->windowState.buffer_height;
-
-//     glGenTextures(1, &window->glState.texture);
-//     glBindTexture(GL_TEXTURE_2D, window->glState.texture);
-//     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, buffer_width, buffer_height, 0, GL_BGR, GL_UNSIGNED_BYTE, NULL);
-//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-//     // glGenerateMipmap(GL_TEXTURE_2D);
-
-//     glGenBuffers(1, &window->glState.pbo);
-//     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, window->glState.pbo);
-//     glBufferData(GL_PIXEL_UNPACK_BUFFER, buffer_width * buffer_height * sizeof(COLORREF), NULL, GL_STREAM_DRAW);
-
-//     GLint result;
-//     window->glState.vertexShaderSRC = readShaderFile("src/shaders/vertexShader.glsl");
-//     window->glState.fragmentShaderSRC = readShaderFile("src/shaders/fragmentShader.glsl");
-
-//     window->glState.vertexShader = glCreateShader(GL_VERTEX_SHADER);
-//     glShaderSource(window->glState.vertexShader, 1, (const GLchar *const *)&window->glState.vertexShaderSRC, NULL);
-//     glCompileShader(window->glState.vertexShader);
-
-//     glGetShaderiv(window->glState.vertexShader, GL_COMPILE_STATUS, &result);
-//     if (result == GL_FALSE)
-//     {
-//         return CGI_false;
-//     }
-
-//     window->glState.fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-//     glShaderSource(window->glState.fragmentShader, 1, (const GLchar *const *)&window->glState.fragmentShaderSRC, NULL);
-//     glCompileShader(window->glState.fragmentShader);
-
-//     glGetShaderiv(window->glState.fragmentShader, GL_COMPILE_STATUS, &result);
-
-//     if (result == GL_FALSE)
-//     {
-//         // printf("failed");
-//         return CGI_false;
-//     }
-
-//     window->glState.shaderProgram = glCreateProgram();
-//     glAttachShader(window->glState.shaderProgram, window->glState.vertexShader);
-//     glAttachShader(window->glState.shaderProgram, window->glState.fragmentShader);
-//     glLinkProgram(window->glState.shaderProgram);
-
-//     glGetProgramiv(window->glState.shaderProgram, GL_LINK_STATUS, &result);
-//     if (result == GL_FALSE)
-//         return CGI_false;
-
-//     glDeleteShader(window->glState.vertexShader);
-//     glDeleteShader(window->glState.fragmentShader);
-
-//     float r = (float)window->base_color.r / 255;
-//     float g = (float)window->base_color.g / 255;
-//     float b = (float)window->base_color.b / 255;
-
-//     glClearColor(r, g, b, 1.0f);
-//     glUseProgram(window->glState.shaderProgram);
-//     glBindVertexArray(window->glState.vao);
-//     return CGI_true;
-// }
-
-// CGIBool Opengl_render(CGIWindow *window)
-// {
-
-//     // glBindTexture(GL_TEXTURE_2D,window->glState.texture);
-//     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, window->glState.pbo);
-
-//     GLubyte *ptr = (GLubyte *)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, window->windowState.buffer_width * window->windowState.buffer_height * sizeof(COLORREF), GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_WRITE_BIT);
-
-//     if (ptr)
-//     {
-//         memcpy(ptr, window->windowState.buffer, window->windowState.buffer_height * window->windowState.buffer_width * sizeof(COLORREF));
-//         glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
-//     }
-//     else
-//         return CGI_false;
-
-//     // glBindBuffer(GL_PIXEL_UNPACK_BUFFER,window->glState.pbo);
-//     glBindTexture(GL_TEXTURE_2D, window->glState.texture);
-//     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, window->windowState.buffer_width, window->windowState.buffer_height, GL_BGRA, GL_UNSIGNED_BYTE, 0);
-
-//     glDrawElements(GL_TRIANGLES, window->glState.i_m_el_size, GL_UNSIGNED_INT, 0);
-
-//     SwapBuffers(window->glState.hdc);
-//     // printf("Drawing via opengl swap");
-
-//     return CGI_true;
-// }
-// #endif
-
 CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_pos, unsigned int y_pos, unsigned int width, unsigned int height, CGIColor_t color)
 {
     CGIWindow *window = (CGIWindow *)malloc(sizeof(CGIWindow));
+    if (!window)
+        return NULL;
 
     memset(window, 0, sizeof(CGIWindow));
 
     window->window_name = _strdup(window_name);
+    if (!window->window_name)
+    {
+        free(window);
+        return NULL;
+    }
+
     window->position.x = x_pos;
     window->position.y = y_pos;
     window->height = height;
@@ -611,18 +510,32 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
     window->win_base_color = RGB(color.r, color.g, color.b);
     window->base_color = color;
     window->open = CGI_false;
+    window->focused = CGI_false;
 
-    // handle os level setup
+    // Handle OS level setup
     ZeroMemory(&window->windowState.wc, sizeof(WNDCLASSA));
     window->windowState.wc.style = CS_HREDRAW | CS_VREDRAW;
     window->windowState.wc.lpfnWndProc = windows_procedure;
-    window->windowState.wc.hInstance = GetModuleHandle(NULL);
+    window->windowState.wc.hInstance = GetModuleHandleA(NULL);
     window->windowState.wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     window->windowState.wc.lpszClassName = classname;
 
-    RegisterClassA(&window->windowState.wc);
+    if (!RegisterClassA(&window->windowState.wc))
+    {
+        CGIWindowCleanup(window);
+        return NULL;
+    }
 
-    window->windowState.hwnd = CreateWindowA(window->windowState.wc.lpszClassName, window->window_name, WS_OVERLAPPEDWINDOW, window->position.x, window->position.y, window->width, window->height, NULL, NULL, window->windowState.wc.hInstance, window);
+    window->windowState.hwnd = CreateWindowA(window->windowState.wc.lpszClassName,
+                                             window->window_name,
+                                             WS_OVERLAPPEDWINDOW,
+                                             window->position.x,
+                                             window->position.y,
+                                             window->width,
+                                             window->height,
+                                             NULL, NULL,
+                                             window->windowState.wc.hInstance,
+                                             window);
 
     if (!window->windowState.hwnd)
     {
@@ -631,6 +544,11 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
     }
 
     window->windowState.hdc = GetDC(window->windowState.hwnd);
+    if (!window->windowState.hdc)
+    {
+        CGIWindowCleanup(window);
+        return NULL;
+    }
 
     // Get actual client area size
     RECT rect;
@@ -639,62 +557,99 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
     window->windowState.buffer_height = rect.bottom - rect.top;
 
     // Allocate buffer with correct client area size
-    window->windowState.buffer = (COLORREF *)malloc(window->windowState.buffer_width * window->windowState.buffer_height * sizeof(COLORREF));
+    window->windowState.buffer = (COLORREF *)malloc(window->windowState.buffer_width *
+                                                    window->windowState.buffer_height *
+                                                    sizeof(COLORREF));
 
-    if (window->windowState.buffer == NULL)
+    if (!window->windowState.buffer)
     {
         CGIWindowCleanup(window);
         return NULL;
     }
 
     // Fill buffer with base color
-    int buffer_size = window->windowState.buffer_width * window->windowState.buffer_height;
-    for (int i = 0; i < buffer_size; i++)
+    unsigned int buffer_size = window->windowState.buffer_width * window->windowState.buffer_height;
+    for (unsigned int i = 0; i < buffer_size; i++)
     {
         window->windowState.buffer[i] = window->win_base_color;
     }
 
     // Create bitmap with CLIENT AREA dimensions
-    MakeBMI(window, &window->windowState.bmi, window->windowState.buffer_height, window->windowState.buffer_width);
-
-    window->display.width = GetSystemMetrics(SM_CXSCREEN);
-    window->display.height = GetSystemMetrics(SM_CYSCREEN);
-    POINT point;
-    GetCursorPos(&point);
-    window->display.cursor.x = point.x;
-    window->display.cursor.y = point.y;
+    if (!MakeBMI(window, &window->windowState.bmi, window->windowState.buffer_height, window->windowState.buffer_width))
+    {
+        CGIWindowCleanup(window);
+        return NULL;
+    }
 
     return window;
 }
 
+CGIBool CGIIsWindowFocused(CGIWindow *window)
+{
+    if (!window || !window->windowState.hwnd)
+        return CGI_false;
+
+    if (GetForegroundWindow() == window->windowState.hwnd)
+    {
+        return CGI_true;
+    }
+
+    return CGI_false;
+}
+
+// Will update the non-relying states of window
+void internal_window_basic_update(CGIWindow *window)
+{
+    if (!window || !window->windowState.hwnd)
+        return;
+
+    POINT point;
+    RECT rect;
+    GetClientRect(window->windowState.hwnd, &rect);
+    GetCursorPos(&point);
+    ScreenToClient(window->windowState.hwnd, &point);
+    window->cursor.x = point.x;
+    window->cursor.y = point.y;
+
+    window->focused = CGIIsWindowFocused(window);
+}
+
 CGIBool CGIShowWindow(CGIWindow *window)
 {
-    if (!window)
+    if (!window || !window->windowState.hwnd)
     {
         return CGI_false;
     }
+
     ShowWindow(window->windowState.hwnd, SW_SHOW);
 
     window->open = CGI_true;
-
-    RECT rect;
-    GetClientRect(window->windowState.hwnd, &rect);
-    window->windowState.buffer_width = rect.right - rect.left;
-    window->windowState.buffer_height = rect.bottom - rect.top;
-
     UpdateWindow(window->windowState.hwnd);
+    window->focused = CGIIsWindowFocused(window);
     return CGI_true;
 }
 
 CGIBool CGIIsWindowOpen(const CGIWindow *window)
 {
+    if (!window)
+        return CGI_false;
+
     return window->open;
+}
+
+CGIBool CGICloseWindow(CGIWindow *window)
+{
+    if (!window)
+        return CGI_false;
+    window->open = CGI_false;
+    return CGI_true;
 }
 
 CGIBool CGIRefreshBuffer(CGIWindow *window)
 {
-    if (!window)
+    if (!window || !window->windowState.hwnd)
         return CGI_false;
+
     InvalidateRect(window->windowState.hwnd, NULL, TRUE);
     UpdateWindow(window->windowState.hwnd);
     return CGI_true;
@@ -702,25 +657,28 @@ CGIBool CGIRefreshBuffer(CGIWindow *window)
 
 CGIBool CGIClearBuffer(CGIWindow *window, CGIColor_t color)
 {
-    if (!window)
+    if (!window || !window->windowState.buffer)
         return CGI_false;
 
-    int size = window->windowState.buffer_height * window->windowState.buffer_width;
-    for (int i = 0; i < size; i++)
+    unsigned int size = window->windowState.buffer_height * window->windowState.buffer_width;
+    COLORREF refcolor = RGB(color.r, color.g, color.b);
+    for (unsigned int i = 0; i < size; i++)
     {
-        window->windowState.buffer[i] = RGB(color.r, color.g, color.b);
+        window->windowState.buffer[i] = refcolor;
     }
     return CGI_true;
 }
 
 CGIBool CGIRefreshWindow(CGIWindow *window)
 {
-    if (!window)
+    if (!window || !window->windowState.hwnd)
         return CGI_false;
+
     if (window->open == CGI_false)
     {
         return CGI_false;
     }
+
     while (PeekMessageA(&window->windowState.msg, NULL, 0, 0, PM_REMOVE))
     {
         if (window->windowState.msg.message == WM_QUIT)
@@ -731,12 +689,17 @@ CGIBool CGIRefreshWindow(CGIWindow *window)
         TranslateMessage(&window->windowState.msg);
         DispatchMessageA(&window->windowState.msg);
     }
-    // CGIRefreshBuffer(window);
+
+    // Update window states
+    internal_window_basic_update(window);
     return CGI_true;
 }
 
 void CGISetPixel(CGIWindow *window, int x_pos, int y_pos, CGIColor_t color)
 {
+    if (!window || !window->windowState.buffer)
+        return;
+
     if (x_pos < 0 || y_pos < 0 ||
         x_pos >= (int)window->windowState.buffer_width ||
         y_pos >= (int)window->windowState.buffer_height)
@@ -745,82 +708,110 @@ void CGISetPixel(CGIWindow *window, int x_pos, int y_pos, CGIColor_t color)
     window->windowState.buffer[y_pos * window->windowState.buffer_width + x_pos] = RGB(color.r, color.g, color.b);
 }
 
-const void *CGIQueryWindow(CGIQuery query, CGIWindow *window)
+const void *CGIPerformQuery(CGIQuery query, CGI *cgi, CGIWindow *window)
 {
     switch (query)
     {
-    case CGI_query_window_internal_win32_HWND:
-    {
-        return &window->windowState.hwnd;
-    }
-    case CGI_query_window_internal_win32_HDC:
-    {
-        return &window->windowState.hdc;
-    }
-    case CGI_query_window_internal_win32_BITMAPINFO:
-    {
-        return &window->windowState.bmi;
-    }
-    case CGI_query_window_internal_win32_PAINTSTRUCT:
-    {
-        return &window->windowState.ps;
-    }
-    case CGI_query_window_name:
-    {
-        return &window->window_name;
-    }
-    case CGI_query_window_height:
-    {
-        return &window->height;
-    }
-    case CGI_query_window_width:
-    {
-        return &window->width;
-    }
-    case CGI_query_window_buffer_height:
-    {
-        return &window->windowState.buffer_height;
-    }
-    case CGI_query_window_buffer_width:
-    {
-        return &window->windowState.buffer_width;
-    }
-    case CGI_query_window_base_color:
-    {
-        return &window->base_color;
-    }
-    case CGI_query_window_position:
-    {
-        return &window->position;
-    }
-    case CGI_query_system_display_width:
-    {
-        window->display.width = GetSystemMetrics(SM_CXSCREEN);
-        return &window->display.width;
-    }
-    case CGI_query_system_display_height:
-    {
-        window->display.height = GetSystemMetrics(SM_CYSCREEN);
-        return &window->display.height;
-    }
-    case CGI_query_window_open_status:
-    {
-        return &window->open;
-    }
-    default:
-        break;
-    }
+        // ---------------- Window-related queries ----------------
+        case CGI_query_window_internal_win32_HWND:
+            if (!window) return NULL;
+            return &window->windowState.hwnd;
 
-    return NULL;
+        case CGI_query_window_internal_win32_HDC:
+            if (!window) return NULL;
+            return &window->windowState.hdc;
+
+        case CGI_query_window_internal_win32_BITMAPINFO:
+            if (!window) return NULL;
+            return &window->windowState.bmi;
+
+        case CGI_query_window_internal_win32_PAINTSTRUCT:
+            if (!window) return NULL;
+            return &window->windowState.ps;
+
+        case CGI_query_window_name:
+            if (!window || !window->window_name) return NULL;
+            return &window->window_name; 
+
+        case CGI_query_window_height:
+            if (!window) return NULL;
+            return &window->height;
+
+        case CGI_query_window_width:
+            if (!window) return NULL;
+            return &window->width;
+
+        case CGI_query_window_buffer_height:
+            if (!window) return NULL;
+            return &window->windowState.buffer_height;
+
+        case CGI_query_window_buffer_width:
+            if (!window) return NULL;
+            return &window->windowState.buffer_width;
+
+        case CGI_query_window_base_color:
+            if (!window) return NULL;
+            return &window->base_color;
+
+        case CGI_query_window_position:
+            if (!window) return NULL;
+            return &window->position;
+
+        case CGI_query_window_open_status:
+            if (!window) return NULL;
+            return &window->open;
+
+        case CGI_query_window_cursor_position:
+            if (!window) return NULL;
+            return &window->cursor;
+
+        case CGI_query_window_focus_status:
+            if (!window) return NULL;
+            return &window->focused;
+
+        // ---------------- System/CGI-related queries ----------------
+        case CGI_query_system_display_width:
+            if (!cgi) return NULL;
+            return &cgi->Display.width;
+
+        case CGI_query_system_display_height:
+            if (!cgi) return NULL;
+            return &cgi->Display.height;
+
+        case CGI_query_system_display_refresh_rate:
+            if (!cgi) return NULL;
+            return &cgi->Display.refresh_rate;
+
+        case CGI_query_system_display_physical_width:
+            if (!cgi) return NULL;
+            return &cgi->Display.physical_width;
+
+        case CGI_query_system_display_physical_height:
+            if (!cgi) return NULL;
+            return &cgi->Display.physical_height;
+
+        case CGI_query_system_cursor_position:
+            if (!cgi) return NULL;
+            return &cgi->Cursor.cursor_position;
+
+        case CGI_query_system_l_button_pressed:
+            if (!cgi) return NULL;
+            return &cgi->Cursor.l_button_pressed;
+
+        case CGI_query_system_r_button_pressed:
+            if (!cgi) return NULL;
+            return &cgi->Cursor.r_button_pressed;
+
+        case CGI_query_system_scroll_delta:
+            if (!cgi) return NULL;
+            return &cgi->Cursor.scroll_delta;
+
+        case CGI_query_system_is_scrolling:
+            if (!cgi) return NULL;
+            return &cgi->Cursor.is_scrolling;
+
+        default:
+            printf("CGIPerformQuery: unhandled query %d\n", query);
+            return NULL;
+    }
 }
-
-CGIBool CGIIsWindowFocused(CGIWindow *window)
-{
-    if (GetForegroundWindow() == window->windowState.hwnd)
-    {
-        return CGI_true;
-    }
-
-    return CGI_false;
-}
-
