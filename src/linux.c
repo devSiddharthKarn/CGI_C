@@ -1,19 +1,40 @@
 #define CGI_LINUX_IMPLEMENTATION_ACTIVE
 
-#include "cgi.h"
+#include "include/cgi.h"
 #include "X11/Xlib.h"
 #include "X11/Xutil.h"
 #include "X11/keysym.h"
 #include "stdlib.h"
 
-#include "stdio.h"
+
+
+struct  CGI
+{
+    struct
+    {
+        unsigned int width;
+        unsigned int height;
+        unsigned int refresh_rate;
+        unsigned int physical_width;
+        unsigned int physical_height;
+
+    } Display;
+
+    struct
+    {
+        CGIPoint cursor_position;
+        CGIBool l_button_pressed;
+        CGIBool r_button_pressed;
+        
+    } Cursor;
+
+};
 
 CGI *CGIStart()
 {
     CGI *cgi = (CGI *)malloc(sizeof(CGI));
     if (!cgi)
     {
-        perror("Failed to allocate memory for CGI structure.\n");
         return NULL;
     }
     Display *display = XOpenDisplay(NULL);

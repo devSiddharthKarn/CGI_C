@@ -16,7 +16,7 @@
 
 
 
-
+/// @brief structure to CGI's internal color type contains r ,g,b channels
 typedef struct
 {
     unsigned char r;
@@ -24,12 +24,14 @@ typedef struct
     unsigned char b;
 } CGIColor_t;
 
+/// @brief CGI logical bools
 typedef enum
 {
     CGI_false = 0,
     CGI_true = 1
 } CGIBool;
 
+/// @brief structure to represent 2d pixel points (type int)
 typedef struct
 {
     int x;
@@ -38,27 +40,6 @@ typedef struct
 
 
 
-struct  CGI
-{
-    struct
-    {
-        unsigned int width;
-        unsigned int height;
-        unsigned int refresh_rate;
-        unsigned int physical_width;
-        unsigned int physical_height;
-
-    } Display;
-
-    struct
-    {
-        CGIPoint cursor_position;
-        CGIBool l_button_pressed;
-        CGIBool r_button_pressed;
-        
-    } Cursor;
-
-};
 
 
 
@@ -182,17 +163,3 @@ typedef enum
     CGI_input_key_f12,
 } CGIInputKey;
 
-// typedef enum
-// {
-//     CGI_window_hint_default = 0,
-//     CGI_window_hint_centered = 1 << 0,
-//     CGI_window_hint_resizable = 1 << 1,
-//     CGI_window_hint_minimizable = 1 << 2,
-//     CGI_window_hint_maximizable = 1 << 3,
-//     CGI_window_hint_decorated = 1 << 4,
-//     CGI_window_hint_visible = 1 << 5,
-//     CGI_window_hint_on_top = 1 << 6,
-//     CGI_window_hint_on_bottom = 1 << 7,
-//     CGI_window_hint_fullscreen = 1 << 8,
-
-// } CGIWindowHints; // remaining to implement

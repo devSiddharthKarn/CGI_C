@@ -4,7 +4,6 @@
 #include "cgi.h"
 #include "stdlib.h"
 #include "string.h"
-#include "stdio.h"
 
 CGIColor_t CGIMakeColor(unsigned char r, unsigned char g, unsigned char b)
 {
@@ -144,6 +143,30 @@ int CGIKeyToWin32VKKey(CGIInputKey key)
 
     return 0;
 }
+
+
+
+struct  CGI
+{
+    struct
+    {
+        unsigned int width;
+        unsigned int height;
+        unsigned int refresh_rate;
+        unsigned int physical_width;
+        unsigned int physical_height;
+
+    } Display;
+
+    struct
+    {
+        CGIPoint cursor_position;
+        CGIBool l_button_pressed;
+        CGIBool r_button_pressed;
+        
+    } Cursor;
+
+};
 
 CGI *CGIStart()
 {
@@ -667,6 +690,7 @@ CGIBool CGICloseWindow(CGIWindow *window)
     if (!window)
         return CGI_false;
     window->open = CGI_false;
+    // SendMessageA(window->windowState.hwnd,WM_CLOSE,0,0);
     return CGI_true;
 }
 
@@ -849,7 +873,6 @@ const void *CGIPerformQuery(CGIQuery query, CGI *cgi, CGIWindow *window)
         }
 
         default:
-            printf("CGIPerformQuery: unhandled query %d\n", query);
             return NULL;
     }
 }

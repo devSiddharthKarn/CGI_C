@@ -1,4 +1,4 @@
-#include "src/typedefs.h"
+#include "typedefs.h"
 
 #ifndef CGI_LIB_H
 #define CGI_LIB_H
