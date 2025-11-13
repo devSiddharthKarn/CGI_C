@@ -1,97 +1,98 @@
 #include "cgi.h"
-#include <windows.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include "math.h"
+
+#ifdef _WIN32
+#include <windows.h> // for Sleep
+#else
+#include <unistd.h>  // for usleep
+#endif
 
 int main() {
-    CGI *cgi = NULL;
+    srand((unsigned int)time(NULL));
 
-    // Start CGI library
+    CGI *cgi = NULL;
     if (!CGIPerformCommand(CGI_command_CGI_start, NULL, &cgi)) {
         printf("Failed to start CGI\n");
         return -1;
     }
 
-    // Create a window
-    CGIWindow *window = CGICreateWindow("MyWindowClass", "Hello CGI",
-                                        100, 100, 400, 300, (CGIColor_t){0, 0, 0});
-    if (!window) {
-        printf("Failed to create window\n");
-        return -1;
-    }
+    // Create window
+    CGIWindow *win = CGICreateWindow("FunnyClass", "Bouncing Fun!",
+                                     100, 100, 500, 400,
+                                     (CGIColor_t){0, 0, 0});
+    if (!win) return -1;
 
-    // Show window
     CGIBool show = CGI_true;
-    CGIPerformCommand(CGI_command_window_set_window_show_status, &show, &window);
+    CGIPerformCommand(CGI_command_window_set_window_show_status, &show, &win);
 
-    // Make window resizable, minimizable, maximizable
-    CGIBool logic = CGI_true;
-    CGIPerformCommand(CGI_command_window_resizable_logic, &logic, &window);
-    CGIPerformCommand(CGI_command_window_minimizable_logic, &logic, &window);
-    CGIPerformCommand(CGI_command_window_maximizable_logic, &logic, &window);
+    // Allow resizing
+    CGIPerformCommand(CGI_command_window_resizable_logic, &show, &win);
 
-    
-
-    // Set base color to black
-    CGIColor_t black = {0, 0, 0};
-    CGIPerformCommand(CGI_command_window_set_window_base_color, &black, &window);
-
-    // Focus the window
-    CGIPerformCommand(CGI_command_window_set_focus_status, &show, &window);
-
-    printf("Window created! Press ESC to exit or close the window.\n");
-
-    // Animation variables
+    int dx = 4, dy = 3;         // window movement
+    int dr = 2, dg = 3, db = 4; // color change
     CGIPoint pos = {100, 100};
-    CGIPoint size = {400, 300};
+    CGIPoint size = {500, 400};
     CGIColor_t color = {0, 0, 0};
-    int dx = 2, dy = 2;
-    int dr = 1, dg = 2, db = 3;
 
-    CGIPoint p={100,0};
-    CGIPerformCommand(CGI_command_CGI_set_cursor_position,&p,&cgi);
+    CGIPoint cursor = {0, 0};
 
-    // Main loop
-    while (CGIIsWindowOpen(window)) {
-        // Move window around
-        pos.x += dx;
-        pos.y += dy;
+    printf("Press ESC to exit!\n");
+
+    while (CGIIsWindowOpen(win)) {
+        // Move window
+        pos.x += dx; pos.y += dy;
         if (pos.x < 0 || pos.x + size.x > 800) dx = -dx;
         if (pos.y < 0 || pos.y + size.y > 600) dy = -dy;
-        CGIPerformCommand(CGI_command_window_set_window_pos, &pos, &window);
+        CGIPerformCommand(CGI_command_window_set_window_pos, &pos, &win);
 
-        // Change window size
-        size.x += (dx > 0 ? 1 : -1);
-        size.y += (dy > 0 ? 1 : -1);
-        if (size.x < 200 || size.x > 600) dx = -dx;
-        if (size.y < 150 || size.y > 450) dy = -dy;
-        CGIPerformCommand(CGI_command_window_set_window_size, &size, &window);
+        // Resize window like breathing
+        size.x += (dx>0?1:-1); size.y += (dy>0?1:-1);
+        if (size.x < 300 || size.x > 600) dx=-dx;
+        if (size.y < 200 || size.y > 450) dy=-dy;
+        CGIPerformCommand(CGI_command_window_set_window_size, &size, &win);
 
-        // Change base color gradually
+        // Disco color
         color.r = (color.r + dr) % 256;
         color.g = (color.g + dg) % 256;
         color.b = (color.b + db) % 256;
-        CGIPerformCommand(CGI_command_window_set_window_base_color, &color, &window);
+        CGIPerformCommand(CGI_command_window_set_window_base_color, &color, &win);
 
-        // Draw some pixels randomly
-        for (int i = 0; i < 50; i++) {
-            CGIPixel p = {{rand() % size.x, rand() % size.y}, {rand() % 256, rand() % 256, rand() % 256}};
-            CGIPerformCommand(CGI_command_window_set_pixel, &p, &window);
+        // Fireworks pixels
+        for (int i = 0; i < 30; i++) {
+            CGIPixel p = {
+                {rand() % size.x, rand() % size.y},
+                {(unsigned char)(rand()%256), (unsigned char)(rand()%256), (unsigned char)(rand()%256)}
+            };
+            CGIPerformCommand(CGI_command_window_set_pixel, &p, &win);
         }
 
-        // Refresh
-        CGIRefreshWindow(window);
-        CGIClearBuffer(window, color);
-        CGIRefreshBuffer(window);
+        // Move cursor in a circle
+        static double angle = 0;
+        cursor.x = (int)(pos.x + size.x/2 + 100 * cos(angle));
+        cursor.y = (int)(pos.y + size.y/2 + 100 * sin(angle));
+        angle += 0.1;
+        CGIPerformCommand(CGI_command_CGI_set_cursor_position, &cursor, &cgi);
 
-        if(CGIIsKeyPressed(window,CGI_input_key_escape)) CGICloseWindow(window);
+        // Refresh window & buffer
+        CGIPerformCommand(CGI_command_window_refresh_window, NULL, &win);
+        CGIPerformCommand(CGI_command_window_clear_buffer, &color, &win);
+        CGIPerformCommand(CGI_command_window_refresh_buffer, NULL, &win);
 
-        // Small delay
-        Sleep(16); // ~60 FPS
+        // Close on ESC
+        if (CGIIsKeyPressed(win, CGI_input_key_escape))
+            CGIPerformCommand(CGI_command_window_close, NULL, &win);
+
+        // Sleep ~60 FPS
+        #ifdef _WIN32
+        Sleep(16);
+        #else
+        usleep(16000);
+        #endif
     }
 
-    // Cleanup
-    CGIPerformCommand(CGI_command_window_cleanup, NULL, &window);
     CGIPerformCommand(CGI_command_CGI_end, NULL, &cgi);
-
     return 0;
 }

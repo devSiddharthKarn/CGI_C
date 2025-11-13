@@ -34,10 +34,11 @@ typedef struct
     int y;
 } CGIPoint;
 
-typedef struct {
+typedef struct
+{
     CGIPoint point;
     CGIColor_t color;
-}CGIPixel;
+} CGIPixel;
 
 typedef enum
 {
@@ -88,19 +89,18 @@ typedef enum
 
 } CGIQuery;
 
-
-
-typedef enum{
+typedef enum
+{
     CGI_command_faulty_NULL,
-    
-    //CGI_struct_commands
+
+    // CGI_struct_commands
     CGI_command_CGI_start,
     CGI_command_CGI_update,
     CGI_command_CGI_end,
     CGI_command_CGI_set_cursor_position,
 
-    //window commands
-    // CGI_command_window_create_window,
+    // window commands
+    //  CGI_command_window_create_window,
     CGI_command_window_cleanup,
     CGI_command_window_set_pixel,
     CGI_command_window_refresh_window,
@@ -117,8 +117,7 @@ typedef enum{
     CGI_command_window_minimizable_logic,
     CGI_command_window_maximizable_logic,
 
-}CGICommand;
-
+} CGICommand;
 
 typedef enum
 {
