@@ -47,6 +47,9 @@ int main() {
     int dx = 2, dy = 2;
     int dr = 1, dg = 2, db = 3;
 
+    CGIPoint p={100,0};
+    CGIPerformCommand(CGI_command_CGI_set_cursor_position,&p,&cgi);
+
     // Main loop
     while (CGIIsWindowOpen(window)) {
         // Move window around
