@@ -933,6 +933,17 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
         return CGIEnd(*out_cgi);
     }
 
+    case CGI_command_CGI_set_cursor_position:{
+        if(!args || !acceptor) return CGI_false;
+        CGI** cgi = (CGI**)acceptor;
+        CGIPoint* point = (CGIPoint*)args;
+
+        SetCursorPos(point->x,point->y);
+        CGIUpdate(*cgi);
+
+        return CGI_true;
+    }
+
         // create window remaining
 
     case CGI_command_window_cleanup:

@@ -97,6 +97,7 @@ typedef enum{
     CGI_command_CGI_start,
     CGI_command_CGI_update,
     CGI_command_CGI_end,
+    CGI_command_CGI_set_cursor_position,
 
     //window commands
     CGI_command_window_create_window,
