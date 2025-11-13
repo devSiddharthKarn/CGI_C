@@ -687,7 +687,7 @@ CGIBool CGICloseWindow(CGIWindow *window)
         return CGI_false;
     window->open = CGI_false;
     // SendMessageA(window->windowState.hwnd,WM_CLOSE,0,0);
-    PostMessageA(window->windowState.hwnd, WM_CLOSE, 0, 0);
+    // PostMessageA(window->windowState.hwnd, WM_CLOSE, 0, 0);
     return CGI_true;
 }
 

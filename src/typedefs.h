@@ -100,7 +100,7 @@ typedef enum{
     CGI_command_CGI_set_cursor_position,
 
     //window commands
-    CGI_command_window_create_window,
+    // CGI_command_window_create_window,
     CGI_command_window_cleanup,
     CGI_command_window_set_pixel,
     CGI_command_window_refresh_window,

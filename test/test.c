@@ -83,6 +83,8 @@ int main() {
         CGIClearBuffer(window, color);
         CGIRefreshBuffer(window);
 
+        if(CGIIsKeyPressed(window,CGI_input_key_escape)) CGICloseWindow(window);
+
         // Small delay
         Sleep(16); // ~60 FPS
     }

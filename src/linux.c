@@ -1,14 +1,15 @@
 #define CGI_LINUX_IMPLEMENTATION_ACTIVE
-
-#include "include/cgi.h"
+#include "cgi.h"
 #include "X11/Xlib.h"
 #include "X11/Xutil.h"
 #include "X11/keysym.h"
+#include <X11/extensions/Xrandr.h>
 #include "stdlib.h"
+#include "string.h"
 
+// #include "stdio.h"
 
-
-struct  CGI
+struct CGI
 {
     struct
     {
@@ -25,9 +26,8 @@ struct  CGI
         CGIPoint cursor_position;
         CGIBool l_button_pressed;
         CGIBool r_button_pressed;
-        
-    } Cursor;
 
+    } Cursor;
 };
 
 CGI *CGIStart()
@@ -51,14 +51,24 @@ CGI *CGIStart()
     cgi->Display.physical_height = DisplayHeightMM(display, screen);
     cgi->Display.physical_width = DisplayWidthMM(display, screen);
 
-    // refresh rate handle remaining
+    // Get refresh rate using XRandR extension
+    cgi->Display.refresh_rate = 60; // Default value
+    XRRScreenConfiguration *screen_config = XRRGetScreenInfo(display, RootWindow(display, screen));
+    if (screen_config)
+    {
+        cgi->Display.refresh_rate = XRRConfigCurrentRate(screen_config);
+        XRRFreeScreenConfigInfo(screen_config);
+    }
 
     Window root_window, child_window;
     unsigned int mask;
     int root_x, root_y, win_x, win_y;
     XQueryPointer(display, DefaultRootWindow(display), &root_window, &child_window,
-                  &cgi->Cursor.cursor_position.x, &cgi->Cursor.cursor_position.y,
-                  &root_x, &root_y, &mask);
+                  &root_x, &root_y,
+                  &win_x, &win_y, &mask);
+
+    cgi->Cursor.cursor_position.x = root_x;
+    cgi->Cursor.cursor_position.y = root_y;
 
     XCloseDisplay(display);
 
@@ -86,12 +96,14 @@ CGIBool CGIUpdate(CGI *cgi)
     unsigned int mask;
     int root_x, root_y, win_x, win_y;
     XQueryPointer(display, DefaultRootWindow(display), &root_window, &child_window,
-                  &cgi->Cursor.cursor_position.x, &cgi->Cursor.cursor_position.y,
-                  &root_x, &root_y, &mask);
+                  &root_x, &root_y,
+                  &win_x, &win_y, &mask);
+
+    cgi->Cursor.cursor_position.x = root_x;
+    cgi->Cursor.cursor_position.y = root_y;
 
     if (mask & Button1Mask)
     {
-
         cgi->Cursor.l_button_pressed = CGI_true;
     }
     else
@@ -101,8 +113,7 @@ CGIBool CGIUpdate(CGI *cgi)
 
     if (mask & Button3Mask)
     {
-        // printf("pressed right");
-        cgi->Cursor.l_button_pressed = CGI_true;
+        cgi->Cursor.r_button_pressed = CGI_true;
     }
     else
     {
@@ -491,6 +502,12 @@ CGIBool CGIWindowCleanup(CGIWindow *window)
         window->windowState.display = NULL;
     }
 
+    if (window->name)
+    {
+        free(window->name);
+        window->name = NULL;
+    }
+
     free(window);
 
     return CGI_true;
@@ -592,7 +609,18 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
         return NULL;
     }
 
-    XStoreName(window->windowState.display, window->windowState.window, window_name);
+    const char *title = (window_name != NULL) ? window_name : "";
+    XStoreName(window->windowState.display, window->windowState.window, title);
+    window->name = strdup(title);
+
+    if (!window->name)
+    {
+        XDestroyWindow(window->windowState.display, window->windowState.window);
+        XCloseDisplay(window->windowState.display);
+        free(window);
+        return NULL;
+    }
+
     window->windowState.gc = XCreateGC(window->windowState.display, window->windowState.window, 0, NULL);
 
     XSelectInput(window->windowState.display, window->windowState.window, StructureNotifyMask | MotionNotify | PointerMotionMask | ButtonPressMask | ButtonReleaseMask);
@@ -604,7 +632,6 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
     }
 
     window->windowState.classname = classname;
-    window->name = window_name;
     window->position.x = x_pos;
     window->position.y = y_pos;
     set_width_and_height(window);
@@ -909,4 +936,288 @@ const void *CGIPerformQuery(CGIQuery query, CGI *cgi, CGIWindow *window)
         break;
     }
     return NULL;
+}
+
+CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acceptor)
+{
+
+    switch (command)
+    {
+    case CGI_command_faulty_NULL:
+        return CGI_false;
+
+    case CGI_command_CGI_start:
+    {
+        if (!acceptor)
+            return CGI_false;
+
+        CGI **out_cgi = (CGI **)acceptor;
+        *out_cgi = CGIStart();
+
+        return (*out_cgi == NULL) ? CGI_false : CGI_true;
+    }
+    case CGI_command_CGI_update:
+    {
+        if (!acceptor)
+            return CGI_false;
+        CGI **out_cgi = (CGI **)acceptor;
+        return CGIUpdate(*out_cgi);
+    }
+
+    case CGI_command_CGI_end:
+    {
+        if (!acceptor)
+            return CGI_false;
+        CGI **out_cgi = (CGI **)acceptor;
+        return CGIEnd(*out_cgi);
+    }
+
+    case CGI_command_CGI_set_cursor_position:
+    {
+        if (!args || !acceptor)
+            return CGI_false;
+        CGI **cgi = (CGI **)acceptor;
+        CGIPoint *point = (CGIPoint *)args;
+        Display *display = XOpenDisplay(NULL);
+        int screen = DefaultScreen(display);
+        XWarpPointer(display, None, RootWindow(display, screen), 0, 0, 0, 0, point->x, point->y);
+        XFlush(display);
+        XCloseDisplay(display);
+        CGIUpdate(*cgi);
+
+        return CGI_true;
+    }
+
+    case CGI_command_window_set_pixel:
+    {
+        if (!args || !acceptor)
+            return CGI_false;
+
+        CGIPixel *pixel = (CGIPixel *)args;
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        CGISetPixel(*window, pixel->point.x, pixel->point.y, pixel->color);
+
+        return CGI_true;
+    }
+
+    case CGI_command_window_refresh_window:
+    {
+        if (!acceptor)
+            return CGI_false;
+
+        CGIWindow **window = (CGIWindow **)acceptor;
+        return CGIRefreshWindow(*window);
+    }
+
+    case CGI_command_window_refresh_buffer:
+    {
+        if (!acceptor)
+            return CGI_false;
+        CGIWindow **window = (CGIWindow **)acceptor;
+        return CGIRefreshBuffer(*window);
+    }
+
+    case CGI_command_window_clear_buffer:
+    {
+        if (!args || !acceptor)
+            return CGI_false;
+
+        CGIColor_t *color = (CGIColor_t *)args;
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        return CGIClearBuffer(*window, *color);
+    }
+
+    case CGI_command_window_set_window_title:
+    {
+        if (!acceptor)
+            return CGI_false;
+
+        const char *title = (args == NULL) ? "" : (*(char **)args);
+
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        XStoreName((*window)->windowState.display, (*window)->windowState.window, title);
+
+        // Free old name before allocating new one
+        if ((*window)->name)
+        {
+            free((*window)->name);
+        }
+        (*window)->name = strdup(title);
+
+        if (!(*window)->name)
+        {
+            return CGI_false;
+        }
+
+        return CGI_true;
+    }
+
+    case CGI_command_window_set_window_pos:
+    {
+        if (!args || !acceptor)
+            return CGI_false;
+
+        CGIWindow **window = (CGIWindow **)acceptor;
+        CGIPoint *point = (CGIPoint *)args;
+
+        XMoveWindow((*window)->windowState.display, (*window)->windowState.window, point->x, point->y);
+
+        (*window)->position.x = point->x;
+        (*window)->position.y = point->y;
+
+        XFlush((*window)->windowState.display);
+
+        return CGI_true;
+    }
+
+    case CGI_command_window_set_window_size:
+    {
+        if (!args || !acceptor)
+            return CGI_false;
+
+        CGIPoint *point = (CGIPoint *)args;
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        XResizeWindow((*window)->windowState.display, (*window)->windowState.window, point->x, point->y);
+
+        (*window)->width = point->x;
+        (*window)->height = point->y;
+
+        XFlush((*window)->windowState.display);
+
+        return CGI_true;
+    }
+
+    case CGI_command_window_set_window_base_color:
+    {
+        if (!args || !acceptor)
+            return CGI_false;
+
+        CGIColor_t *color = (CGIColor_t *)args;
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        (*window)->windowState.base_color = MakeColor((*window), *color);
+        (*window)->CGIbase_color = *color;
+
+        return CGI_true;
+    }
+
+    case CGI_command_window_set_window_show_status:
+    {
+        if (!args || !acceptor)
+            return CGI_false;
+
+        
+
+        CGIBool *logic = (CGIBool *)args;
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        if (*logic)
+        {
+            XMapWindow((*window)->windowState.display, (*window)->windowState.window);
+            XFlush((*window)->windowState.display);
+
+            // Update window state similar to CGIShowWindow
+            set_width_and_height(*window);
+            set_window_pos_on_screen(*window);
+            set_window_display_attrs(*window);
+
+            (*window)->open = CGI_true;
+            (*window)->focused = CGIIsWindowFocused(*window);
+        }
+        else
+        {
+            XUnmapWindow((*window)->windowState.display, (*window)->windowState.window);
+            XFlush((*window)->windowState.display);
+
+            (*window)->open = CGI_false;
+        }
+
+        return CGI_true;
+    }
+
+    case CGI_command_window_set_focus_status:
+    {
+        if (!args || !acceptor)
+            return CGI_false;
+
+        CGIBool *logic = (CGIBool *)args;
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        if (*logic)
+        {
+            XSetInputFocus((*window)->windowState.display, (*window)->windowState.window, RevertToParent, CurrentTime);
+            (*window)->focused = CGI_true;
+        }
+        else
+        {
+            XSetInputFocus((*window)->windowState.display, PointerRoot, RevertToParent, CurrentTime);
+            (*window)->focused = CGI_false;
+        }
+
+        XFlush((*window)->windowState.display);
+
+        return CGI_true;
+    }
+
+    case CGI_command_window_close:
+    {
+        if (!acceptor)
+            return CGI_false;
+
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        return CGICloseWindow(*window);
+    }
+
+    case CGI_command_window_resizable_logic:
+    {
+        // printf("here");
+        if (!args || !acceptor)
+            return CGI_false;
+
+        CGIBool *logic = (CGIBool *)args;
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        XSizeHints hints;
+        hints.flags = PMinSize | PMaxSize;
+        if (*logic)
+        {
+            hints.min_width = 0;
+            hints.max_width = DisplayWidth((*window)->windowState.display, (*window)->windowState.screen);
+            hints.min_height = 0;
+            hints.max_height = DisplayHeight((*window)->windowState.display, (*window)->windowState.screen);
+        }
+        else
+        {
+            hints.min_width = (*window)->width;
+            hints.max_width = (*window)->width;
+            hints.min_height = (*window)->height;
+            hints.max_height = (*window)->height;
+        }
+
+        XSetWMNormalHints((*window)->windowState.display, (*window)->windowState.window, &hints);
+
+        XFlush((*window)->windowState.display);
+
+        return CGI_true;
+    }
+
+    case CGI_command_window_minimizable_logic:
+    {
+        return CGI_true;
+    }
+
+    case CGI_command_window_maximizable_logic:
+    {
+        return CGI_true;
+    }
+
+    default:
+        break;
+    }
+    return CGI_false;
 }
