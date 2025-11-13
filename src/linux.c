@@ -152,6 +152,7 @@ struct WindowState
     XColor base_color;
     XEvent event;
     GC gc;
+    Atom wm_delete_atom;
 };
 
 struct CGIWindow
@@ -609,6 +610,10 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
         return NULL;
     }
 
+    window->windowState.wm_delete_atom = XInternAtom(window->windowState.display, "_WM_DELETE_WINDOW", False);
+
+    XSetWMProtocols(window->windowState.display, window->windowState.window, &window->windowState.wm_delete_atom, 1);
+
     const char *title = (window_name != NULL) ? window_name : "";
     XStoreName(window->windowState.display, window->windowState.window, title);
     window->name = strdup(title);
@@ -694,15 +699,7 @@ CGIBool CGIIsWindowOpen(const CGIWindow *window)
     return window->open;
 }
 
-CGIBool CGICloseWindow(CGIWindow *window)
-{
-    if (!window)
-        return CGI_false;
 
-    window->open = CGI_false;
-
-    return CGI_true;
-}
 
 void process_events(CGIWindow *window, XEvent *event)
 {
@@ -738,12 +735,54 @@ void process_events(CGIWindow *window, XEvent *event)
         break;
     }
 
+    // case ClientMessage:
+    // {
+    //     if ((Atom)event->xclient.data.l[0] == window->windowState.wm_delete_atom)
+    //     {
+    //         window->open = CGI_false;
+    //     }
+
+    //     break;
+    // }
+
     default:
         break;
     }
 
     setup_scroll_in_window(window, event);
 }
+
+
+CGIBool CGICloseWindow(CGIWindow *window)
+{
+    if (!window)
+        return CGI_false;
+
+    // XEvent event;
+    // memset(&event, 0, sizeof(event));
+    // event.xclient.type = ClientMessage;
+    // event.xclient.window = window->windowState.window;
+    // event.xclient.message_type = XInternAtom(window->windowState.display, "WM_PROTOCOLS", True);
+    // event.xclient.format = 32;
+    // event.xclient.data.l[0] = window->windowState.wm_delete_atom;
+    // event.xclient.data.l[1] = CurrentTime;
+
+    // // Send the event once
+    // XSendEvent(window->windowState.display, window->windowState.window, False, NoEventMask, &event);
+    // XFlush(window->windowState.display);
+
+    // // Process the event immediately to update window->open status
+    // while (XPending(window->windowState.display))
+    // {
+    //     XNextEvent(window->windowState.display, &window->windowState.event);
+    //     process_events(window, &window->windowState.event);
+    // }
+
+    window->open=CGI_false;
+
+    return CGI_true;
+}
+
 
 void internal_window_basic_update(CGIWindow *window)
 {
@@ -1109,8 +1148,6 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
     {
         if (!args || !acceptor)
             return CGI_false;
-
-        
 
         CGIBool *logic = (CGIBool *)args;
         CGIWindow **window = (CGIWindow **)acceptor;

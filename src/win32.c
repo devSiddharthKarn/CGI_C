@@ -687,7 +687,7 @@ CGIBool CGICloseWindow(CGIWindow *window)
         return CGI_false;
     window->open = CGI_false;
     // SendMessageA(window->windowState.hwnd,WM_CLOSE,0,0);
-    // PostMessageA(window->windowState.hwnd, WM_CLOSE, 0, 0);
+    PostMessageA(window->windowState.hwnd, WM_CLOSE, 0, 0);
     return CGI_true;
 }
 
@@ -959,8 +959,8 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
         if (!acceptor)
             return CGI_false;
         CGIPixel *pixel = (CGIPixel *)args;
-        CGIWindow *window = (CGIWindow *)acceptor;
-        CGISetPixel(window, pixel->point.x, pixel->point.y,pixel->color);
+        CGIWindow **window = (CGIWindow **)acceptor;
+        CGISetPixel(*window, pixel->point.x, pixel->point.y,pixel->color);
         return CGI_true;
     }
 
