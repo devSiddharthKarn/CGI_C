@@ -1,4 +1,4 @@
-#include "include/cgi.h"
+#include "cgi.h"
 #include "stdio.h"
 int main(){
 

@@ -5,16 +5,12 @@
 #pragma once
 
 #ifdef CGI_IMPLEMENTATION_MODE_VERBOSE
-    #ifdef _WIN32
-        #define CGI_WINDOWS_IMPLEMENTATION_ACTIVE
-    #elif __linux__
-        #define CGI_LINUX_IMPLEMENTATION_ACTIVE
-    #endif
+#ifdef _WIN32
+#define CGI_WINDOWS_IMPLEMENTATION_ACTIVE
+#elif __linux__
+#define CGI_LINUX_IMPLEMENTATION_ACTIVE
 #endif
-
-
-
-
+#endif
 
 /// @brief structure to CGI's internal color type contains r ,g,b channels
 typedef struct
@@ -38,42 +34,37 @@ typedef struct
     int y;
 } CGIPoint;
 
-
-
-
-
-
+typedef struct {
+    CGIPoint point;
+    CGIColor_t color;
+}CGIPixel;
 
 typedef enum
 {
-    CGI_query_faulty,
-    CGI_query_window_name,
-    CGI_query_window_position,
-    CGI_query_window_height,
-    CGI_query_window_width,
-    CGI_query_window_buffer_height,
-    CGI_query_window_buffer_width,
-    CGI_query_window_base_color,
-    CGI_query_window_open_status,
-    CGI_query_window_cursor_position,
-    CGI_query_window_focus_status,
-    CGI_query_window_scroll_delta_x,
-    CGI_query_window_scroll_delta_y,
-    CGI_query_window_is_scrolled_x,
-    CGI_query_window_is_scrolled_y,
+    CGI_query_faulty_NULL,
+    CGI_query_window_name_charPointer,
+    CGI_query_window_position_CGIPoint,
+    CGI_query_window_height_unsigned_int,
+    CGI_query_window_width_unsigned_int,
+    CGI_query_window_buffer_height_unsigned_int,
+    CGI_query_window_buffer_width_unsigned_int,
+    CGI_query_window_base_color_CGIColor_t,
+    CGI_query_window_open_status_CGIBool,
+    CGI_query_window_cursor_position_CGIPoint,
+    CGI_query_window_focus_status_CGIBool,
+    CGI_query_window_scroll_delta_x_float,
+    CGI_query_window_scroll_delta_y_float,
+    CGI_query_window_is_scrolled_x_CGIBool,
+    CGI_query_window_is_scrolled_y_CGIBool,
 
-
-    CGI_query_system_display_width,
-    CGI_query_system_display_height,
-    CGI_query_system_display_refresh_rate,
-    CGI_query_system_display_physical_width,
-    CGI_query_system_display_physical_height,
-    CGI_query_system_cursor_position,
-    CGI_query_system_l_button_pressed,
-    CGI_query_system_r_button_pressed,
-    
-
-    
+    CGI_query_system_display_width_unsigned_int,
+    CGI_query_system_display_height_unsigned_int,
+    CGI_query_system_display_refresh_rate_unsigned_int,
+    CGI_query_system_display_physical_width_unsigned_int,
+    CGI_query_system_display_physical_height_unsigned_int,
+    CGI_query_system_cursor_position_CGIPoint,
+    CGI_query_system_l_button_pressed_CGIBool,
+    CGI_query_system_r_button_pressed_CGIBool,
 
 #ifdef CGI_WINDOWS_IMPLEMENTATION_ACTIVE
     ///@brief window specific
@@ -88,17 +79,45 @@ typedef enum
 #ifdef CGI_LINUX_IMPLEMENTATION_ACTIVE
     ///@brief linux specific implementation
     CGI_query_window_internal_linux_Xlib_DisplayPointer,
-    CGI_query_window_internal_linux_Xlib_screen,
-    CGI_query_window_internal_linux_Xlib_window,
-    CGI_query_window_internal_linux_Xlib_colormap,
+    CGI_query_window_internal_linux_Xlib_screen_int,
+    CGI_query_window_internal_linux_Xlib_window_Window,
+    CGI_query_window_internal_linux_Xlib_colormap_Colormap,
     CGI_query_window_internal_linux_Xlib_GC,
-    CGI_query_window_internal_linux_Xlib_type_base_color,
+    CGI_query_window_internal_linux_Xlib_type_base_color_XColor,
 #endif
 
-    
+} CGIQuery;
 
+
+
+typedef enum{
+    CGI_command_faulty_NULL,
     
-}CGIQuery;
+    //CGI_struct_commands
+    CGI_command_CGI_start,
+    CGI_command_CGI_update,
+    CGI_command_CGI_end,
+
+    //window commands
+    CGI_command_window_create_window,
+    CGI_command_window_cleanup,
+    CGI_command_window_set_pixel,
+    CGI_command_window_refresh_window,
+    CGI_command_window_refresh_buffer,
+    CGI_command_window_clear_buffer,
+    CGI_command_window_set_window_title,
+    CGI_command_window_set_window_pos,
+    CGI_command_window_set_window_size,
+    CGI_command_window_set_window_base_color,
+    CGI_command_window_set_window_show_status,
+    CGI_command_window_set_focus_status,
+    CGI_command_window_close,
+    CGI_command_window_resizable_logic,
+    CGI_command_window_minimizable_logic,
+    CGI_command_window_maximizable_logic,
+
+}CGICommand;
+
 
 typedef enum
 {
@@ -162,4 +181,3 @@ typedef enum
     CGI_input_key_f11,
     CGI_input_key_f12,
 } CGIInputKey;
-

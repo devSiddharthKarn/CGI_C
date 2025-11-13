@@ -144,9 +144,7 @@ int CGIKeyToWin32VKKey(CGIInputKey key)
     return 0;
 }
 
-
-
-struct  CGI
+struct CGI
 {
     struct
     {
@@ -163,9 +161,8 @@ struct  CGI
         CGIPoint cursor_position;
         CGIBool l_button_pressed;
         CGIBool r_button_pressed;
-        
-    } Cursor;
 
+    } Cursor;
 };
 
 CGI *CGIStart()
@@ -493,16 +490,18 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         break;
     }
 
-    case WM_MOUSEWHEEL:{
+    case WM_MOUSEWHEEL:
+    {
         int delta = GET_WHEEL_DELTA_WPARAM(wp);
-        window->scroll_delta_y = (float)delta/120;
-        window->is_scrolled_y=CGI_true;
+        window->scroll_delta_y = (float)delta / 120;
+        window->is_scrolled_y = CGI_true;
         break;
     }
-    case WM_MOUSEHWHEEL:{
+    case WM_MOUSEHWHEEL:
+    {
         int delta = GET_WHEEL_DELTA_WPARAM(wp);
-        window->scroll_delta_x = (float)delta/120;
-        window->is_scrolled_x=CGI_true;
+        window->scroll_delta_x = (float)delta / 120;
+        window->is_scrolled_x = CGI_true;
         break;
     }
 
@@ -547,10 +546,10 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
     window->base_color = color;
     window->open = CGI_false;
     window->focused = CGI_false;
-    window->is_scrolled_x=CGI_false;
-    window->scroll_delta_x=0;
-    window->is_scrolled_y=CGI_false;
-    window->scroll_delta_y=0;
+    window->is_scrolled_x = CGI_false;
+    window->scroll_delta_x = 0;
+    window->is_scrolled_y = CGI_false;
+    window->scroll_delta_y = 0;
 
     // Handle OS level setup
     ZeroMemory(&window->windowState.wc, sizeof(WNDCLASSA));
@@ -621,8 +620,6 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
         return NULL;
     }
 
-    
-
     return window;
 }
 
@@ -655,11 +652,10 @@ void internal_window_basic_update(CGIWindow *window)
 
     window->focused = CGIIsWindowFocused(window);
 
-    window->is_scrolled_x=CGI_false;
-    window->scroll_delta_x=0;
-    window->is_scrolled_y=CGI_false;
-    window->scroll_delta_y=0;
-    
+    window->is_scrolled_x = CGI_false;
+    window->scroll_delta_x = 0;
+    window->is_scrolled_y = CGI_false;
+    window->scroll_delta_y = 0;
 }
 
 CGIBool CGIShowWindow(CGIWindow *window)
@@ -691,6 +687,7 @@ CGIBool CGICloseWindow(CGIWindow *window)
         return CGI_false;
     window->open = CGI_false;
     // SendMessageA(window->windowState.hwnd,WM_CLOSE,0,0);
+    PostMessageA(window->windowState.hwnd, WM_CLOSE, 0, 0);
     return CGI_true;
 }
 
@@ -761,118 +758,408 @@ const void *CGIPerformQuery(CGIQuery query, CGI *cgi, CGIWindow *window)
 {
     switch (query)
     {
-        // ---------------- Window-related queries ----------------
-        case CGI_query_window_internal_win32_HWND:
-            if (!window) return NULL;
-            return &window->windowState.hwnd;
-
-        case CGI_query_window_internal_win32_HDC:
-            if (!window) return NULL;
-            return &window->windowState.hdc;
-
-        case CGI_query_window_internal_win32_BITMAPINFO:
-            if (!window) return NULL;
-            return &window->windowState.bmi;
-
-        case CGI_query_window_internal_win32_PAINTSTRUCT:
-            if (!window) return NULL;
-            return &window->windowState.ps;
-
-        case CGI_query_window_name:
-            if (!window || !window->window_name) return NULL;
-            return &window->window_name; 
-
-        case CGI_query_window_height:
-            if (!window) return NULL;
-            return &window->height;
-
-        case CGI_query_window_width:
-            if (!window) return NULL;
-            return &window->width;
-
-        case CGI_query_window_buffer_height:
-            if (!window) return NULL;
-            return &window->windowState.buffer_height;
-
-        case CGI_query_window_buffer_width:
-            if (!window) return NULL;
-            return &window->windowState.buffer_width;
-
-        case CGI_query_window_base_color:
-            if (!window) return NULL;
-            return &window->base_color;
-
-        case CGI_query_window_position:
-            if (!window) return NULL;
-            return &window->position;
-
-        case CGI_query_window_open_status:
-            if (!window) return NULL;
-            return &window->open;
-
-        case CGI_query_window_cursor_position:
-            if (!window) return NULL;
-            return &window->cursor;
-
-        case CGI_query_window_focus_status:
-            if (!window) return NULL;
-            return &window->focused;
-
-        // ---------------- System/CGI-related queries ----------------
-        case CGI_query_system_display_width:
-            if (!cgi) return NULL;
-            return &cgi->Display.width;
-
-        case CGI_query_system_display_height:
-            if (!cgi) return NULL;
-            return &cgi->Display.height;
-
-        case CGI_query_system_display_refresh_rate:
-            if (!cgi) return NULL;
-            return &cgi->Display.refresh_rate;
-
-        case CGI_query_system_display_physical_width:
-            if (!cgi) return NULL;
-            return &cgi->Display.physical_width;
-
-        case CGI_query_system_display_physical_height:
-            if (!cgi) return NULL;
-            return &cgi->Display.physical_height;
-
-        case CGI_query_system_cursor_position:
-            if (!cgi) return NULL;
-            return &cgi->Cursor.cursor_position;
-
-        case CGI_query_system_l_button_pressed:
-            if (!cgi) return NULL;
-            return &cgi->Cursor.l_button_pressed;
-
-        case CGI_query_system_r_button_pressed:
-            if (!cgi) return NULL;
-            return &cgi->Cursor.r_button_pressed;
-
-        case CGI_query_window_scroll_delta_x:
-            if (!window) return NULL;
-            return &window->scroll_delta_x;
-
-        
-        case CGI_query_window_scroll_delta_y:
-        {
-            if(!window) return NULL;
-            return &window->scroll_delta_y;
-        }
-        
-
-        case CGI_query_window_is_scrolled_x:
-            if (!window) return NULL;
-            return &window->is_scrolled_x;
-
-        case CGI_query_window_is_scrolled_y:{
-            if(!window) return NULL;
-            return &window->is_scrolled_y;
-        }
-
-        default:
+    // ---------------- Window-related queries ----------------
+    case CGI_query_window_internal_win32_HWND:
+        if (!window)
             return NULL;
+        return &window->windowState.hwnd;
+
+    case CGI_query_window_internal_win32_HDC:
+        if (!window)
+            return NULL;
+        return &window->windowState.hdc;
+
+    case CGI_query_window_internal_win32_BITMAPINFO:
+        if (!window)
+            return NULL;
+        return &window->windowState.bmi;
+
+    case CGI_query_window_internal_win32_PAINTSTRUCT:
+        if (!window)
+            return NULL;
+        return &window->windowState.ps;
+
+    case CGI_query_window_name_charPointer:
+        if (!window || !window->window_name)
+            return NULL;
+        return &window->window_name;
+
+    case CGI_query_window_height_unsigned_int:
+        if (!window)
+            return NULL;
+        return &window->height;
+
+    case CGI_query_window_width_unsigned_int:
+        if (!window)
+            return NULL;
+        return &window->width;
+
+    case CGI_query_window_buffer_height_unsigned_int:
+        if (!window)
+            return NULL;
+        return &window->windowState.buffer_height;
+
+    case CGI_query_window_buffer_width_unsigned_int:
+        if (!window)
+            return NULL;
+        return &window->windowState.buffer_width;
+
+    case CGI_query_window_base_color_CGIColor_t:
+        if (!window)
+            return NULL;
+        return &window->base_color;
+
+    case CGI_query_window_position_CGIPoint:
+        if (!window)
+            return NULL;
+        return &window->position;
+
+    case CGI_query_window_open_status_CGIBool:
+        if (!window)
+            return NULL;
+        return &window->open;
+
+    case CGI_query_window_cursor_position_CGIPoint:
+        if (!window)
+            return NULL;
+        return &window->cursor;
+
+    case CGI_query_window_focus_status_CGIBool:
+        if (!window)
+            return NULL;
+        return &window->focused;
+
+    // ---------------- System/CGI-related queries ----------------
+    case CGI_query_system_display_width_unsigned_int:
+        if (!cgi)
+            return NULL;
+        return &cgi->Display.width;
+
+    case CGI_query_system_display_height_unsigned_int:
+        if (!cgi)
+            return NULL;
+        return &cgi->Display.height;
+
+    case CGI_query_system_display_refresh_rate_unsigned_int:
+        if (!cgi)
+            return NULL;
+        return &cgi->Display.refresh_rate;
+
+    case CGI_query_system_display_physical_width_unsigned_int:
+        if (!cgi)
+            return NULL;
+        return &cgi->Display.physical_width;
+
+    case CGI_query_system_display_physical_height_unsigned_int:
+        if (!cgi)
+            return NULL;
+        return &cgi->Display.physical_height;
+
+    case CGI_query_system_cursor_position_CGIPoint:
+        if (!cgi)
+            return NULL;
+        return &cgi->Cursor.cursor_position;
+
+    case CGI_query_system_l_button_pressed_CGIBool:
+        if (!cgi)
+            return NULL;
+        return &cgi->Cursor.l_button_pressed;
+
+    case CGI_query_system_r_button_pressed_CGIBool:
+        if (!cgi)
+            return NULL;
+        return &cgi->Cursor.r_button_pressed;
+
+    case CGI_query_window_scroll_delta_x_float:
+        if (!window)
+            return NULL;
+        return &window->scroll_delta_x;
+
+    case CGI_query_window_scroll_delta_y_float:
+    {
+        if (!window)
+            return NULL;
+        return &window->scroll_delta_y;
     }
+
+    case CGI_query_window_is_scrolled_x_CGIBool:
+        if (!window)
+            return NULL;
+        return &window->is_scrolled_x;
+
+    case CGI_query_window_is_scrolled_y_CGIBool:
+    {
+        if (!window)
+            return NULL;
+        return &window->is_scrolled_y;
+    }
+
+    default:
+        return NULL;
+    }
+}
+
+CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acceptor)
+{
+    switch (command)
+    {
+    case CGI_command_faulty_NULL:
+        return CGI_false;
+
+    case CGI_command_CGI_start:
+    {
+        // if(!args) return CGI_false;
+        if (!acceptor)
+            return CGI_false;
+
+        CGI **out_cgi = (CGI **)acceptor;
+        *out_cgi = CGIStart();
+
+        return (*out_cgi == NULL) ? CGI_false : CGI_true;
+    }
+    case CGI_command_CGI_update:
+    {
+        if (!acceptor)
+            return CGI_false;
+        CGI **out_cgi = (CGI **)acceptor;
+        return CGIUpdate(*out_cgi);
+    }
+
+    case CGI_command_CGI_end:
+    {
+        if (!acceptor)
+            return CGI_false;
+        CGI **out_cgi = (CGI **)acceptor;
+        return CGIEnd(*out_cgi);
+    }
+
+        // create window remaining
+
+    case CGI_command_window_cleanup:
+    {
+        CGIWindow **window = (CGIWindow **)acceptor;
+        return CGIWindowCleanup(*window);
+    }
+
+    case CGI_command_window_set_pixel:
+    {
+        if (!args)
+            return CGI_false;
+        if (!acceptor)
+            return CGI_false;
+        CGIPixel *pixel = (CGIPixel *)args;
+        CGIWindow *window = (CGIWindow *)acceptor;
+        CGISetPixel(window, pixel->point.x, pixel->point.y,pixel->color);
+        return CGI_true;
+    }
+
+    case CGI_command_window_refresh_window:
+    {
+        if (!acceptor)
+            return CGI_false;
+        return CGIRefreshWindow(*((CGIWindow **)acceptor));
+    }
+    case CGI_command_window_refresh_buffer:
+    {
+        if (!acceptor)
+            return CGI_false;
+        return CGIRefreshBuffer(*((CGIWindow **)acceptor));
+    }
+
+    case CGI_command_window_clear_buffer:
+    {
+        if (!args)
+            return CGI_false;
+        if (!acceptor)
+            return CGI_false;
+
+        return CGIClearBuffer(*((CGIWindow **)acceptor), *(CGIColor_t *)args);
+    }
+
+    case CGI_command_window_set_window_title:
+    {
+        if (!args)
+            return CGI_false;
+        if (!acceptor)
+            return CGI_false;
+
+        CGIWindow **window = (CGIWindow **)acceptor;
+        char **title = (char **)args;
+        return (SetWindowTextA((*window)->windowState.hwnd, *title) ? CGI_true : CGI_false);
+    }
+
+    case CGI_command_window_set_window_pos:
+    {
+        if (!args)
+            return CGI_false;
+        if (!acceptor)
+            return CGI_false;
+
+        CGIPoint *point = (CGIPoint *)args;
+        CGIWindow **window = (CGIWindow **)acceptor;
+        return (SetWindowPos((*window)->windowState.hwnd, 0, point->x, point->y, 0, 0, SWP_NOSIZE | SWP_NOZORDER) ? CGI_true : CGI_false);
+    }
+
+    case CGI_command_window_set_window_size:
+    {
+        if (!acceptor)
+            return CGI_false;
+        if (!args)
+            return CGI_false;
+
+        CGIPoint *point = (CGIPoint *)args;
+        CGIWindow **window = (CGIWindow **)acceptor;
+        return (SetWindowPos((*window)->windowState.hwnd, 0, 0, 0, point->x, point->y, SWP_NOMOVE | SWP_NOZORDER) ? CGI_true : CGI_false);
+    }
+
+    case CGI_command_window_set_window_base_color:
+    {
+        if (!args)
+            return CGI_false;
+        if (!acceptor)
+            return CGI_false;
+
+        CGIColor_t *color = (CGIColor_t *)args;
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        (*window)->base_color = *color;
+
+        return CGI_true;
+    }
+
+    case CGI_command_window_set_window_show_status:
+    {
+        if (!args)
+            return CGI_false;
+        if (!acceptor)
+            return CGI_false;
+
+        CGIBool *logic = (CGIBool *)args;
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        ShowWindow((*window)->windowState.hwnd, (*logic ? SW_SHOW : SW_HIDE));
+        
+        UpdateWindow((*window)->windowState.hwnd);
+        
+        (*window)->focused = CGIIsWindowFocused(*window);
+        (*window)->open = CGI_true;
+
+        return CGI_true;
+    }
+
+    case CGI_command_window_set_focus_status:
+    {
+        if (!args)
+            return CGI_false;
+        if (!acceptor)
+            return CGI_false;
+
+        CGIBool *logic = (CGIBool *)args;
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        SetFocus((*logic ? (*window)->windowState.hwnd : NULL));
+
+        return CGI_true;
+    }
+
+    case CGI_command_window_close:
+    {
+        if (!acceptor)
+            return CGI_false;
+
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        return CGICloseWindow(*window);
+    }
+
+    case CGI_command_window_resizable_logic:
+    {
+        if (!args)
+            return CGI_false;
+        if (!acceptor)
+            return CGI_false;
+
+        CGIBool *logic = (CGIBool *)args;
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        LONG style = GetWindowLong((*window)->windowState.hwnd, GWL_STYLE);
+
+        if (*logic)
+        {
+            style |= WS_THICKFRAME | WS_MAXIMIZEBOX | WS_MINIMIZEBOX;
+        }
+        else
+        {
+            style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX | WS_MINIMIZEBOX);
+        }
+
+        SetWindowLong((*window)->windowState.hwnd, GWL_STYLE, style);
+
+        SetWindowPos((*window)->windowState.hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+        return CGI_true;
+    }
+
+    case CGI_command_window_minimizable_logic:
+    {
+        if (!args)
+            return CGI_false;
+        if (!acceptor)
+            return CGI_true;
+
+        CGIBool *logic = (CGIBool *)args;
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        LONG style = GetWindowLong((*window)->windowState.hwnd, GWL_STYLE);
+
+        if (*logic)
+        {
+            style |= WS_MINIMIZEBOX;
+        }
+        else
+        {
+            style &= ~WS_MINIMIZEBOX;
+        }
+
+        SetWindowLong((*window)->windowState.hwnd, GWL_STYLE, style);
+
+        SetWindowPos((*window)->windowState.hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+        return CGI_true;
+    }
+
+    case CGI_command_window_maximizable_logic:
+    {
+
+        if (!args)
+            return CGI_false;
+        if (!acceptor)
+            return CGI_true;
+
+        CGIBool *logic = (CGIBool *)args;
+        CGIWindow **window = (CGIWindow **)acceptor;
+
+        LONG style = GetWindowLong((*window)->windowState.hwnd, GWL_STYLE);
+
+        if (*logic)
+        {
+            style |= WS_MAXIMIZEBOX;
+        }
+        else
+        {
+            style &= ~WS_MAXIMIZEBOX;
+        }
+
+        SetWindowLong((*window)->windowState.hwnd, GWL_STYLE, style);
+
+        SetWindowPos((*window)->windowState.hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+        return CGI_true;
+    }
+
+    default:
+        break;
+    }
+
+    return CGI_false;
 }

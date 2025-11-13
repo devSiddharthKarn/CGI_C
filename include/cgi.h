@@ -57,5 +57,7 @@ CGIBool CGIIsKeyPressed(CGIWindow *window, CGIInputKey key);
 
 CGIBool CGIIsWindowFocused(CGIWindow *window);
 
+CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acceptor);
+
 CGI_END_DECLS;
 

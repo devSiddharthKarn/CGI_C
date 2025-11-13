@@ -747,127 +747,127 @@ const void *CGIPerformQuery(CGIQuery query, CGI *cgi, CGIWindow *window)
     switch (query)
     {
     // ---------------- Window-related queries ----------------
-    case CGI_query_window_name:
+    case CGI_query_window_name_charPointer:
     {
         if (!window)
             return NULL;
         return &window->name;
     }
-    case CGI_query_window_cursor_position:
+    case CGI_query_window_cursor_position_CGIPoint:
         if (!window)
             return NULL;
         return &window->cursor;
 
-    case CGI_query_window_width:
+    case CGI_query_window_width_unsigned_int:
         if (!window)
             return NULL;
         return &window->width;
 
-    case CGI_query_window_height:
+    case CGI_query_window_height_unsigned_int:
         if (!window)
             return NULL;
         return &window->height;
 
-    case CGI_query_window_buffer_width:
+    case CGI_query_window_buffer_width_unsigned_int:
         if (!window)
             return NULL;
         return &window->buffer_width;
 
-    case CGI_query_window_buffer_height:
+    case CGI_query_window_buffer_height_unsigned_int:
         if (!window)
             return NULL;
         return &window->buffer_height;
 
-    case CGI_query_window_position:
+    case CGI_query_window_position_CGIPoint:
         if (!window)
             return NULL;
         return &window->position;
 
-    case CGI_query_window_open_status:
+    case CGI_query_window_open_status_CGIBool:
         if (!window)
             return NULL;
         return &window->open;
 
-    case CGI_query_window_base_color:
+    case CGI_query_window_base_color_CGIColor_t:
         if (!window)
             return NULL;
         return &window->CGIbase_color;
 
-    case CGI_query_window_focus_status:
+    case CGI_query_window_focus_status_CGIBool:
         if (!window)
             return NULL;
         return &window->focused;
 
     // ---------------- System/CGI-related queries ----------------
-    case CGI_query_system_cursor_position:
+    case CGI_query_system_cursor_position_CGIPoint:
         if (!cgi)
             return NULL;
         return &cgi->Cursor.cursor_position;
 
-    case CGI_query_system_display_height:
+    case CGI_query_system_display_height_unsigned_int:
         if (!cgi)
             return NULL;
         return &cgi->Display.height;
 
-    case CGI_query_system_display_width:
+    case CGI_query_system_display_width_unsigned_int:
         if (!cgi)
             return NULL;
         return &cgi->Display.width;
 
-    case CGI_query_system_display_physical_height:
+    case CGI_query_system_display_physical_height_unsigned_int:
     {
         if (!cgi)
             return NULL;
         return &cgi->Display.physical_height;
     }
 
-    case CGI_query_system_display_physical_width:
+    case CGI_query_system_display_physical_width_unsigned_int:
     {
         if (!cgi)
             return NULL;
         return &cgi->Display.physical_width;
     }
 
-    case CGI_query_system_display_refresh_rate:
+    case CGI_query_system_display_refresh_rate_unsigned_int:
     {
         if (!cgi)
             return NULL;
         return &cgi->Display.refresh_rate;
     }
 
-    case CGI_query_window_is_scrolled_x:
+    case CGI_query_window_is_scrolled_x_CGIBool:
     {
         if (!window)
             return NULL;
         return &window->is_scrolled_x;
     }
-    case CGI_query_window_is_scrolled_y:
+    case CGI_query_window_is_scrolled_y_CGIBool:
     {
         if (!window)
             return NULL;
         return &window->is_scrolled_y;
     }
-    case CGI_query_system_l_button_pressed:
+    case CGI_query_system_l_button_pressed_CGIBool:
     {
         if (!cgi)
             return NULL;
         return &cgi->Cursor.l_button_pressed;
     }
 
-    case CGI_query_system_r_button_pressed:
+    case CGI_query_system_r_button_pressed_CGIBool:
     {
         if (!cgi)
             return NULL;
         return &cgi->Cursor.r_button_pressed;
     }
 
-    case CGI_query_window_scroll_delta_x:
+    case CGI_query_window_scroll_delta_x_float:
     {
         if (!window)
             return NULL;
         return &window->scroll_delta_x;
     }
-    case CGI_query_window_scroll_delta_y:
+    case CGI_query_window_scroll_delta_y_float:
     {
         if (!window)
             return NULL;
@@ -880,17 +880,17 @@ const void *CGIPerformQuery(CGIQuery query, CGI *cgi, CGIWindow *window)
             return NULL;
         return &window->windowState.display;
 
-    case CGI_query_window_internal_linux_Xlib_screen:
+    case CGI_query_window_internal_linux_Xlib_screen_int:
         if (!window)
             return NULL;
         return &window->windowState.screen;
 
-    case CGI_query_window_internal_linux_Xlib_window:
+    case CGI_query_window_internal_linux_Xlib_window_Window:
         if (!window)
             return NULL;
         return &window->windowState.window;
 
-    case CGI_query_window_internal_linux_Xlib_colormap:
+    case CGI_query_window_internal_linux_Xlib_colormap_Colormap:
         if (!window)
             return NULL;
         return &window->windowState.colormap;
@@ -900,7 +900,7 @@ const void *CGIPerformQuery(CGIQuery query, CGI *cgi, CGIWindow *window)
             return NULL;
         return &window->windowState.gc;
 
-    case CGI_query_window_internal_linux_Xlib_type_base_color:
+    case CGI_query_window_internal_linux_Xlib_type_base_color_XColor:
         if (!window)
             return NULL;
         return &window->windowState.base_color;
