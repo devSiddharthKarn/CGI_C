@@ -437,6 +437,10 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             return DefWindowProcA(hwnd, msg, wp, lp);
 
         RECT rect;
+        GetWindowRect(window->windowState.hwnd,&rect);
+        window->width = rect.right-rect.left;
+        window->height = rect.bottom-rect.top;
+
         GetClientRect(window->windowState.hwnd, &rect);
         unsigned int new_width = rect.right - rect.left;
         unsigned int new_height = rect.bottom - rect.top;
