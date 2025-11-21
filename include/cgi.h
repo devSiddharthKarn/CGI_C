@@ -92,10 +92,10 @@ CGIBool CGISetWindowShowLogic(CGI* cgi, CGIWindow* window,CGIBool logic);
 
 CGIBool CGISetWindowFocusLogic(CGI* cgi, CGIWindow* window, CGIBool logic);
 
-CGIBool CGIWindowResizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic);
+CGIBool CGISetWindowResizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic);
 
-CGIBool CGIWindowMinimizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic);
+CGIBool CGISetWindowMinimizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic);
 
-CGIBool CGIWindowMaximizableLogic(CGI* cgi, CGIWindow* window,CGIBool logic);
+CGIBool CGISetWindowMaximizableLogic(CGI* cgi, CGIWindow* window,CGIBool logic);
 
 CGI_END_DECLS;

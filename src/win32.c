@@ -1262,14 +1262,14 @@ CGIBool CGISetWindowFocusLogic(CGI* cgi, CGIWindow* window, CGIBool logic){
     return CGIPerformCommand(CGI_command_window_set_focus_status,&logic,&window);
 }
 
-CGIBool CGIWindowResizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic){
+CGIBool CGISetWindowResizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic){
     return CGIPerformCommand(CGI_command_window_resizable_logic,&logic,&window);
 }
 
-CGIBool CGIWindowMinimizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic){
+CGIBool CGISetWindowMinimizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic){
     return CGIPerformCommand(CGI_command_window_minimizable_logic,&logic,&window);
 }
 
-CGIBool CGIWindowMaximizableLogic(CGI* cgi, CGIWindow* window,CGIBool logic){
+CGIBool CGISetWindowMaximizableLogic(CGI* cgi, CGIWindow* window,CGIBool logic){
     return CGIPerformCommand(CGI_command_window_maximizable_logic,&logic,&window);
 }
