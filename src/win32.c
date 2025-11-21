@@ -1234,3 +1234,42 @@ CGIBool CGIIsWindowScrolledX(CGIWindow* window){
 CGIBool CGIIsWindowScrolledY(CGIWindow* window){
     return window->is_scrolled_y;
 }
+
+//commands function
+
+CGIBool CGISetWindowTitle(CGI* cgi, CGIWindow* window,char* title){
+    
+    return CGIPerformCommand(CGI_command_window_set_window_title,&title,&window);
+}
+
+CGIBool CGISetWindowPosition(CGI* cgi, CGIWindow* window,CGIPoint position){
+    return CGIPerformCommand(CGI_command_window_set_window_pos,&position,&window);
+}
+
+CGIBool CGISetWindowSize(CGI*cgi, CGI*window,CGIPoint size){
+    return CGIPerformCommand(CGI_command_window_set_window_size,&size,&window);
+}
+
+CGIBool CGISetWindowBaseColor(CGI* cgi, CGIWindow* window,CGIColor_t base_color){
+    return CGIPerformCommand(CGI_command_window_set_window_base_color,&base_color,&window);
+}
+
+CGIBool CGISetWindowShowLogic(CGI* cgi, CGIWindow* window,CGIBool logic){
+    return CGIPerformCommand(CGI_command_window_set_window_show_status,&logic,&window);
+}
+
+CGIBool CGISetWindowFocusLogic(CGI* cgi, CGIWindow* window, CGIBool logic){
+    return CGIPerformCommand(CGI_command_window_set_focus_status,&logic,&window);
+}
+
+CGIBool CGIWindowResizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic){
+    return CGIPerformCommand(CGI_command_window_resizable_logic,&logic,&window);
+}
+
+CGIBool CGIWindowMinimizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic){
+    return CGIPerformCommand(CGI_command_window_minimizable_logic,&logic,&window);
+}
+
+CGIBool CGIWindowMaximizableLogic(CGI* cgi, CGIWindow* window,CGIBool logic){
+    return CGIPerformCommand(CGI_command_window_maximizable_logic,&logic,&window);
+}

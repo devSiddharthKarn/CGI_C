@@ -80,4 +80,22 @@ CGIBool CGIIsWindowScrolledX(CGIWindow *window);
 
 CGIBool CGIIsWindowScrolledY(CGIWindow *window);
 
+CGIBool CGISetWindowTitle(CGI* cgi, CGIWindow* window,char* title);
+
+CGIBool CGISetWindowPosition(CGI* cgi, CGIWindow* window,CGIPoint position);
+
+CGIBool CGISetWindowSize(CGI*cgi, CGI*window,CGIPoint size);
+
+CGIBool CGISetWindowBaseColor(CGI* cgi, CGIWindow* window,CGIColor_t base_color);
+
+CGIBool CGISetWindowShowLogic(CGI* cgi, CGIWindow* window,CGIBool logic);
+
+CGIBool CGISetWindowFocusLogic(CGI* cgi, CGIWindow* window, CGIBool logic);
+
+CGIBool CGIWindowResizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic);
+
+CGIBool CGIWindowMinimizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic);
+
+CGIBool CGIWindowMaximizableLogic(CGI* cgi, CGIWindow* window,CGIBool logic);
+
 CGI_END_DECLS;
