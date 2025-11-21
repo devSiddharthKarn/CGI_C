@@ -62,8 +62,8 @@ sudo dnf install gcc gcc-c++ cmake mesa-libGL-devel libX11-devel
 #### Using Visual Studio
 ```cmd
 # Clone the repository
-git clone https://github.com/devSiddharthKarn/CGI-for-C-language.git
-cd CGI-for-C-language
+git clone https://github.com/devSiddharthKarn/CGI_C.git
+cd CGI_C 
 
 # Configure with Visual Studio generator
 cmake -B build -G "Visual Studio 17 2022"
@@ -93,8 +93,8 @@ ctest
 
 ```bash
 # Clone the repository
-git clone https://github.com/devSiddharthKarn/CGI-for-C-language.git
-cd CGI-for-C-language
+git clone https://github.com/devSiddharthKarn/CGI_C.git
+cd CGI_C
 
 # Configure
 cmake -B build -DCMAKE_BUILD_TYPE=Release
