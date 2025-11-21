@@ -1,0 +1,11 @@
+lib src compilation is important as it is important since the lib is still in development
+
+compile from the main folder
+
+for window win32 lgdi32
+
+gcc test/test.c src/win32.c -o test.exe -lgdi32  -Iinclude
+
+
+for linux based on X11
+gcc test/test.c src/linux.c -lX11 -lXext -lXrandr -Iinclude -o test/test.out

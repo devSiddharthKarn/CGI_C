@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(CGI_C)
 
-# Build static library
 add_library(cgi_c STATIC
     src/platform.c
     # Add other source files if any

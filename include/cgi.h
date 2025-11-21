@@ -16,9 +16,6 @@
 #define CGI_END_DECLS
 #endif
 
-
-
-
 typedef struct CGI CGI;
 
 typedef struct CGIWindow CGIWindow;
@@ -53,11 +50,34 @@ CGIBool CGIRefreshBuffer(CGIWindow *window);
 
 CGIBool CGIClearBuffer(CGIWindow *window, CGIColor_t color);
 
+CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acceptor);
+
 CGIBool CGIIsKeyPressed(CGIWindow *window, CGIInputKey key);
 
 CGIBool CGIIsWindowFocused(CGIWindow *window);
 
-CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acceptor);
+CGIBool CGIIsWindowResized(CGIWindow *window);
+
+CGIPoint CGIGetWindowPosition(CGIWindow *window);
+
+unsigned int CGIGetWindowHeight(CGIWindow *window);
+
+unsigned int CGIGetWindowwidth(CGIWindow *window);
+
+unsigned int CGIGetWindowBufferHeight(CGIWindow *window);
+
+unsigned int CGIGetWindowBufferWidth(CGIWindow *window);
+
+CGIColor_t CGIGetWindowBaseColor(CGIWindow *window);
+
+CGIPoint CGIGetWindowCursorPosition(CGIWindow *window);
+
+float CGIGetWindowScrollDeltaX(CGIWindow *window);
+
+float CGIGetWindowScrollDeltaY(CGIWindow *window);
+
+CGIBool CGIIsWindowScrolledX(CGIWindow *window);
+
+CGIBool CGIIsWindowScrolledY(CGIWindow *window);
 
 CGI_END_DECLS;
-

@@ -272,6 +272,7 @@ struct CGIWindow
     CGIBool is_scrolled_y;
     CGIBool open;
     CGIBool focused;
+    CGIBool resized;
 };
 
 CGIBool CGIWindowCleanup(CGIWindow *window)
@@ -467,6 +468,8 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
 
                 MakeBMI(window, &window->windowState.bmi, new_height, new_width);
+
+                window->resized=CGI_true;
             }
         }
         break;
@@ -655,11 +658,14 @@ void internal_window_basic_update(CGIWindow *window)
     window->cursor.y = point.y;
 
     window->focused = CGIIsWindowFocused(window);
+    window->resized=CGI_false;
 
     window->is_scrolled_x = CGI_false;
     window->scroll_delta_x = 0;
     window->is_scrolled_y = CGI_false;
     window->scroll_delta_y = 0;
+
+    
 }
 
 CGIBool CGIShowWindow(CGIWindow *window)
@@ -1177,4 +1183,54 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
     }
 
     return CGI_false;
+}
+
+CGIBool CGIIsWindowResized(CGIWindow* window){
+    return window->resized;
+}
+
+
+CGIPoint CGIGetWindowPosition(CGIWindow* window){
+    return window->position;
+}
+
+unsigned int CGIGetWindowHeight(CGIWindow* window){
+    return window->height;
+}
+
+unsigned int CGIGetWindowwidth(CGIWindow* window){
+    return window->width;
+}
+
+unsigned int CGIGetWindowBufferHeight(CGIWindow* window){
+    return window->windowState.buffer_height;
+}
+
+unsigned int CGIGetWindowBufferWidth(CGIWindow* window){
+    return window->windowState.buffer_width;
+}
+
+
+CGIColor_t CGIGetWindowBaseColor(CGIWindow* window){
+    return window->base_color;
+}
+
+CGIPoint CGIGetWindowCursorPosition(CGIWindow* window){
+    return window->cursor;
+}
+
+float CGIGetWindowScrollDeltaX(CGIWindow* window){
+    return window->scroll_delta_x;
+}
+
+float CGIGetWindowScrollDeltaY(CGIWindow* window){
+    return window->scroll_delta_y;
+}
+
+CGIBool CGIIsWindowScrolledX(CGIWindow* window){
+    return window->is_scrolled_x;
+}
+
+CGIBool CGIIsWindowScrolledY(CGIWindow* window){
+    return window->is_scrolled_y;
 }

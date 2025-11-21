@@ -1,23 +1,25 @@
-#include "cgi.h"
+#include "../include/cgi.h"
 #include "stdio.h"
-#include "math.h"
 int main(){
 
+    CGI* cgi = CGIStart();
 
-    CGIWindow* window = CGICreateWindow("mywindow","mywindow",0,0,500,500,CGIMakeColor(23,45,6));
+    CGIWindow* window = CGICreateWindow("mywindow","mywindow",0,0,600,600,CGIMakeColor(123,45,122));
 
     CGIShowWindow(window);
 
     while(CGIIsWindowOpen(window)){
-        unsigned int width = *(unsigned int*)CGIPerformQuery(CGI_query_window_width_unsigned_int,NULL,window);
-        unsigned int height = *(unsigned int*)CGIPerformQuery(CGI_query_window_height_unsigned_int,NULL,window);
-
-        printf("%d, %d\n",width,height);
 
         CGIRefreshWindow(window);
-        CGIRefreshBuffer(window);
-    }
 
-    CGIWindowCleanup(window);
+        if(CGIIsWindowScrolledY(window)){
+            printf("scrolled\n");
+        }
+
+        if(CGIIsWindowResized(window)){
+            printf("resized\n");
+        }
+
+    }
 
 }
