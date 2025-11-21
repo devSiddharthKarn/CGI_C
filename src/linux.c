@@ -1294,7 +1294,7 @@ unsigned int CGIGetWindowHeight(CGIWindow* window){
     return window->height;
 }
 
-unsigned int CGIGetWindowwidth(CGIWindow* window){
+unsigned int CGIGetWindowWidth(CGIWindow* window){
     return window->width;
 }
 

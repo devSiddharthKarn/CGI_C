@@ -80,7 +80,7 @@ CGIPoint CGIGetWindowPosition(CGIWindow *window);
 
 unsigned int CGIGetWindowHeight(CGIWindow *window);
 
-unsigned int CGIGetWindowwidth(CGIWindow *window);
+unsigned int CGIGetWindowWidth(CGIWindow *window);
 
 unsigned int CGIGetWindowBufferHeight(CGIWindow *window);
 
