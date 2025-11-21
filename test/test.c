@@ -1,33 +1,24 @@
 #include "../include/cgi.h"
-#include "stdio.h"
+
 int main(){
 
     CGI* cgi = CGIStart();
 
-    CGIWindow* window = CGICreateWindow("mywindow","mywindow",0,0,600,600,CGIMakeColor(123,45,122));
+    CGIWindow* window = CGICreateWindow("window","mywindow",0,0,600,600,CGIMakeColor(10,30,40));
 
     CGIShowWindow(window);
 
+    // int index =0;
+
     while(CGIIsWindowOpen(window)){
-
         CGIRefreshWindow(window);
-
-        if(CGIIsWindowScrolledY(window)){
-            printf("scrolled\n");
-        }
-
-        if(CGIIsWindowResized(window)){
-            printf("resized\n");
-        }
-
-        if(CGIIsKeyPressed(window,CGI_input_key_w)){
-            CGISetWindowTitle(cgi,window,"title changed");
-            CGISetWindowFocusLogic(cgi,window,CGI_false);
-        }
-
+        CGIClearBuffer(window,CGIMakeColor(100,20,30));
+        CGIRefreshBuffer(window);
     }
+
 
     CGIWindowCleanup(window);
     CGIEnd(cgi);
-
+    
+    return 0;
 }
