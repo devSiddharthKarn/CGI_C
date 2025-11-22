@@ -1331,6 +1331,17 @@ CGIBool CGIIsWindowScrolledY(CGIWindow* window){
     return window->is_scrolled_y;
 }
 
+
+CGIBool CGIIsMouseButtonPressed(CGI* cgi,CGIInputKey key){
+    CGIQuery query ;
+    if(key==CGI_input_key_mouse_l){
+        query=CGI_query_system_l_button_pressed_CGIBool;
+    }else if(CGI_input_key_mouse_r){
+        query = CGI_query_system_r_button_pressed_CGIBool;
+    }
+    return *(CGIBool*)CGIPerformQuery(query,cgi,NULL);
+}
+
 //commands function
 
 CGIBool CGISetWindowTitle(CGI* cgi, CGIWindow* window,char* title){

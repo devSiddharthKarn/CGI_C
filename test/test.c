@@ -1,33 +1,26 @@
 #include "../include/cgi.h"
-
+// #include "unistd.h"
+#include "stdio.h"
 int main(){
 
     CGI* cgi = CGIStart();
 
-    CGIWindow* window = CGICreateWindow("window","mywindow",0,0,600,600,CGIMakeColor(10,30,40));
+    CGIWindow* window = CGICreateWindow("mywindow","window",0,0,500,500,CGIMakeColor(100,233,111));
 
     CGIShowWindow(window);
 
-    // int index =0;
-
     while(CGIIsWindowOpen(window)){
+        CGIUpdate(cgi);
         CGIRefreshWindow(window);
-        // CGIClearBuffer(window,CGIMakeColor(100,20,30));
         CGIRefreshBuffer(window);
-
-
-        CGIPoint p = CGIGetWindowCursorPosition(window);
-
         
-        if(CGIIsKeyPressed(window,CGI_input_key_ctrl)){
-            CGISetPixel(window,p.x,p.y,CGIMakeColor(100,100,255));
-            
+        if(CGIIsMouseButtonPressed(cgi,CGI_input_key_mouse_l)){
+            printf("left\n");
+        }
+        
+        if(CGIIsMouseButtonPressed(cgi,CGI_input_key_mouse_r)){
+            printf("right\n");
         }
     }
 
-
-    CGIWindowCleanup(window);
-    CGIEnd(cgi);
-    
-    return 0;
 }

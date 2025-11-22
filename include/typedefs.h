@@ -197,4 +197,7 @@ typedef enum
     CGI_input_key_f10,
     CGI_input_key_f11,
     CGI_input_key_f12,
+
+    CGI_input_key_mouse_l,
+    CGI_input_key_mouse_r
 } CGIInputKey;

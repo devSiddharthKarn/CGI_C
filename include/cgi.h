@@ -98,6 +98,8 @@ CGIBool CGIIsWindowScrolledX(CGIWindow *window);
 
 CGIBool CGIIsWindowScrolledY(CGIWindow *window);
 
+CGIBool CGIIsMouseButtonPressed(CGI* cgi, CGIInputKey key);
+
 CGIBool CGISetWindowTitle(CGI* cgi, CGIWindow* window,char* title);
 
 CGIBool CGISetWindowPosition(CGI* cgi, CGIWindow* window,CGIPoint position);
