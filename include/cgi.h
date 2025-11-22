@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-
-
+/// @file cgi.h
+/// @brief Main CGI library header file
 #include "typedefs.h"
 
 #ifndef CGI_LIB_H
@@ -34,88 +34,237 @@
 #define CGI_END_DECLS
 #endif
 
+/// @brief Opaque structure representing the CGI instance
 typedef struct CGI CGI;
 
+/// @brief Opaque structure representing a CGI window
 typedef struct CGIWindow CGIWindow;
 
 CGI_BEGIN_DECLS
 
+/// @brief Start and initialize a CGI instance
+/// @return Pointer to the initialized CGI instance, or NULL on failure
 CGI *CGIStart();
 
+/// @brief Update the CGI instance to refresh states
+/// @param cgi Pointer to the CGI instance to be updated
+/// @return CGI_true if successful, otherwise CGI_false
 CGIBool CGIUpdate(CGI *cgi);
 
+/// @brief End the CGI instance and free resources
+/// @param cgi Pointer to the CGI instance to be ended
+/// @return CGI_true if successful, otherwise CGI_false
 CGIBool CGIEnd(CGI *cgi);
 
+/// @brief Create a new CGI window
+/// @param classname The class name for the window
+/// @param window_name The name/title of the window
+/// @param x_pos The x position of the window
+/// @param y_pos The y position of the window
+/// @param width The width of the window
+/// @param height The height of the window
+/// @param color The base color of the window
+/// @return Pointer to the created CGIWindow instance, or NULL on failure
 CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_pos, unsigned int y_pos, unsigned int width, unsigned int height, CGIColor_t color);
 
+/// @brief Clean up and destroy a CGI window
+/// @param window Pointer to the CGIWindow instance to be cleaned up
+/// @return CGI_true if successful, otherwise CGI_false
 CGIBool CGIWindowCleanup(CGIWindow *window);
 
+/// @brief Show the specified CGI window
+/// @param window Pointer to the CGIWindow instance to be shown
+/// @return CGI_true if successful, otherwise CGI_false
 CGIBool CGIShowWindow(CGIWindow *window);
 
+/// @brief Set a pixel in the window's buffer to a specified color
+/// @param window Pointer to the CGIWindow instance
+/// @param x_pos The x position of the pixel
+/// @param y_pos The y position of the pixel
+/// @param color The color to set the pixel to
+/// @return void
 void CGISetPixel(CGIWindow *window, int x_pos, int y_pos, CGIColor_t color);
 
-const void *CGIPerformQuery(CGIQuery query, CGI *cgi, CGIWindow *window);
+/// @brief  Perform a query on the CGI or CGIWindow structure
+/// @param query name of the query to be performed
+/// @param acceptor whom to make it accept
+/// @return const void * pointer to the result of the query (need to be casted to appropriate type)
+const void *CGIPerformQuery(CGIQuery query, const void *acceptor);
 
+/// @brief check if the window is open
+/// @param window CGIWindow pointer to the window to be checked
+/// @return CGI_true if the window is open, otherwise CGI_false
 CGIBool CGIIsWindowOpen(const CGIWindow *window);
 
+/// @brief close the specified window
+/// @param window Pointer to the CGIWindow instance to be closed
+/// @return CGI_true if successful, otherwise CGI_false
 CGIBool CGICloseWindow(CGIWindow *window);
 
+/// @brief Create a CGIColor_t from r, g, b values
+/// @param r Red channel value (0-255)
+/// @param g Green channel value (0-255)
+/// @param b Blue channel value (0-255)
+/// @return CGIColor_t representing the color
 CGIColor_t CGIMakeColor(unsigned char r, unsigned char g, unsigned char b);
 
+/// @brief  Refresh the specified window
+/// @param window Pointer to the CGIWindow instance to be refreshed
+/// @return CGI_true if successful, otherwise CGI_false
 CGIBool CGIRefreshWindow(CGIWindow *window);
 
+/// @brief Refresh the buffer of the specified window
+/// @param window Pointer to the CGIWindow instance whose buffer is to be refreshed
+/// @return CGI_true if successful, otherwise CGI_false
 CGIBool CGIRefreshBuffer(CGIWindow *window);
 
+/// @brief Clear the buffer of the specified window with a given color
+/// @param window Pointer to the CGIWindow instance whose buffer is to be cleared
+/// @param color The color to clear the buffer with
+/// @return CGI_true if successful, otherwise CGI_false
 CGIBool CGIClearBuffer(CGIWindow *window, CGIColor_t color);
 
+/// @brief  Perform a command on the CGI or CGIWindow structure
+/// @param command      The command to be performed
+/// @param args         Arguments for the command
+/// @param acceptor     The entity to accept the command
+/// @return CGI_true if successful, otherwise CGI_false
 CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acceptor);
 
+/// @brief Check if a specific key is pressed in the given window
+/// @param window Pointer to the CGIWindow instance
+/// @param key The key to check
+/// @return CGI_true if the key is pressed, otherwise CGI_false
 CGIBool CGIIsKeyPressed(CGIWindow *window, CGIInputKey key);
 
+/// @brief Check if the specified window is focused
+/// @param window Pointer to the CGIWindow instance
+/// @return CGI_true if the window is focused, otherwise CGI_false
 CGIBool CGIIsWindowFocused(CGIWindow *window);
 
+/// @brief Check if the specified window has been resized
+/// @param window Pointer to the CGIWindow instance
+/// @return CGI_true if the window has been resized, otherwise CGI_false
 CGIBool CGIIsWindowResized(CGIWindow *window);
 
+/// @brief Get the name of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @return Pointer to the window's name string
+char *CGIGetWindowName(CGIWindow *window);
+
+/// @brief Get the position of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @return The position of the window as a CGIPoint structure
 CGIPoint CGIGetWindowPosition(CGIWindow *window);
 
+/// @brief Get the height of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @return The height of the window
 unsigned int CGIGetWindowHeight(CGIWindow *window);
 
+/// @brief Get the width of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @return The width of the window
 unsigned int CGIGetWindowWidth(CGIWindow *window);
 
+/// @brief Get the buffer height of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @return The buffer height of the window
 unsigned int CGIGetWindowBufferHeight(CGIWindow *window);
 
+/// @brief Get the buffer width of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @return The buffer width of the window
 unsigned int CGIGetWindowBufferWidth(CGIWindow *window);
 
+/// @brief Get the base color of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @return The base color of the window
 CGIColor_t CGIGetWindowBaseColor(CGIWindow *window);
 
+/// @brief Get the cursor position of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @return The cursor position of the window as a CGIPoint structure
 CGIPoint CGIGetWindowCursorPosition(CGIWindow *window);
 
+/// @brief Get the horizontal scroll delta of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @return The horizontal scroll delta of the window
 float CGIGetWindowScrollDeltaX(CGIWindow *window);
 
+/// @brief Get the vertical scroll delta of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @return The vertical scroll delta of the window
 float CGIGetWindowScrollDeltaY(CGIWindow *window);
 
+/// @brief Check if the specified window has been scrolled horizontally
+/// @param window Pointer to the CGIWindow instance
+/// @return CGI_true if the window has been scrolled horizontally, otherwise CGI_false
 CGIBool CGIIsWindowScrolledX(CGIWindow *window);
 
+/// @brief Check if the specified window has been scrolled vertically
+/// @param window Pointer to the CGIWindow instance
+/// @return CGI_true if the window has been scrolled vertically, otherwise CGI_false
 CGIBool CGIIsWindowScrolledY(CGIWindow *window);
 
-CGIBool CGIIsMouseButtonPressed(CGI* cgi, CGIInputKey key);
+/// @brief Check if a specific mouse button is pressed
+/// @param cgi Pointer to the CGI instance
+/// @param key The mouse button key to check
+/// @return CGI_true if the specified mouse button is pressed, otherwise CGI_false
+CGIBool CGIIsMouseButtonPressed(CGI *cgi, CGIInputKey key);
 
-CGIBool CGISetWindowTitle(CGI* cgi, CGIWindow* window,char* title);
+/// @brief  Set the title of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @param title The new title for the window
+/// @return CGI_true if the title was successfully set, otherwise CGI_false
+CGIBool CGISetWindowTitle(CGIWindow *window, char *title);
 
-CGIBool CGISetWindowPosition(CGI* cgi, CGIWindow* window,CGIPoint position);
+/// @brief Set the position of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @param position The new position for the window
+/// @return CGI_true if the position was successfully set, otherwise CGI_false
+CGIBool CGISetWindowPosition(CGIWindow *window, CGIPoint position);
 
-CGIBool CGISetWindowSize(CGI*cgi, CGI*window,CGIPoint size);
+/// @brief Set the size of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @param size The new size for the window
+/// @return CGI_true if the size was successfully set, otherwise CGI_false
+CGIBool CGISetWindowSize(CGIWindow *window, CGIPoint size);
 
-CGIBool CGISetWindowBaseColor(CGI* cgi, CGIWindow* window,CGIColor_t base_color);
+/// @brief Set the base color of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @param base_color The new base color for the window
+/// @return CGI_true if the base color was successfully set, otherwise CGI_false
+CGIBool CGISetWindowBaseColor(CGIWindow *window, CGIColor_t base_color);
 
-CGIBool CGISetWindowShowLogic(CGI* cgi, CGIWindow* window,CGIBool logic);
+/// @brief Set the show logic of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @param logic The new show logic for the window
+/// @return CGI_true if the show logic was successfully set, otherwise CGI_false
+CGIBool CGISetWindowShowLogic(CGIWindow *window, CGIBool logic);
 
-CGIBool CGISetWindowFocusLogic(CGI* cgi, CGIWindow* window, CGIBool logic);
+/// @brief Set the focus logic of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @param logic The new focus logic for the window
+/// @return CGI_true if the focus logic was successfully set, otherwise CGI_false
+CGIBool CGISetWindowFocusLogic(CGIWindow *window, CGIBool logic);
 
-CGIBool CGISetWindowResizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic);
+/// @brief Set the resizable logic of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @param logic The new resizable logic for the window
+/// @return CGI_true if the resizable logic was successfully set, otherwise CGI_false
+CGIBool CGISetWindowResizableLogic(CGIWindow *window, CGIBool logic);
 
-CGIBool CGISetWindowMinimizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic);
+/// @brief Set the minimizable logic of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @param logic The new minimizable logic for the window
+/// @return CGI_true if the minimizable logic was successfully set, otherwise CGI_false
+CGIBool CGISetWindowMinimizableLogic(CGIWindow *window, CGIBool logic);
 
-CGIBool CGISetWindowMaximizableLogic(CGI* cgi, CGIWindow* window,CGIBool logic);
+/// @brief Set the maximizable logic of the specified window
+/// @param window Pointer to the CGIWindow instance
+/// @param logic The new maximizable logic for the window
+/// @return CGI_true if the maximizable logic was successfully set, otherwise CGI_false
+CGIBool CGISetWindowMaximizableLogic(CGIWindow *window, CGIBool logic);
 
 CGI_END_DECLS;

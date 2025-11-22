@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-
-
-
 #define CGI_WINDOWS_IMPLEMENTATION_ACTIVE
+
+/*
+include headers for windows implementation
+source file: win32.c
+*/
 
 #include "Windows.h"
 #include "cgi.h"
@@ -32,6 +34,10 @@ CGIColor_t CGIMakeColor(unsigned char r, unsigned char g, unsigned char b)
     color.b = b;
     return color;
 }
+
+/// @brief Convert CGIInputKey to Windows Virtual-Key code
+/// @param key The CGIInputKey to convert
+/// @return Corresponding Windows Virtual-Key code, or 0 if not found
 
 int CGIKeyToWin32VKKey(CGIInputKey key)
 {
@@ -163,6 +169,7 @@ int CGIKeyToWin32VKKey(CGIInputKey key)
     return 0;
 }
 
+/// @brief Definition of the CGI structure for Windows implementation
 struct CGI
 {
     struct
@@ -184,6 +191,8 @@ struct CGI
     } Cursor;
 };
 
+/// @brief Start and initialize a CGI instance
+/// @return Pointer to the initialized CGI instance, or NULL on failure
 CGI *CGIStart()
 {
     CGI *cgi = (CGI *)malloc(sizeof(CGI));
@@ -214,6 +223,9 @@ CGI *CGIStart()
     return cgi;
 }
 
+/// @brief Update the CGI instance to refresh states
+/// @param cgi Pointer to the CGI instance to be updated
+/// @return CGI_true if successful, otherwise CGI_false
 CGIBool CGIUpdate(CGI *cgi)
 {
     if (!cgi)
@@ -230,6 +242,9 @@ CGIBool CGIUpdate(CGI *cgi)
     return CGI_true;
 }
 
+/// @brief End the CGI instance and free resources
+/// @param cgi Pointer to the CGI instance to be ended
+/// @return CGI_true if successful, otherwise CGI_false
 CGIBool CGIEnd(CGI *cgi)
 {
     if (!cgi)
@@ -238,6 +253,10 @@ CGIBool CGIEnd(CGI *cgi)
     return CGI_true;
 }
 
+/// @brief Check if a specific key is currently pressed
+/// @param window Pointer to the CGIWindow structure
+/// @param key The key to check
+/// @return CGI_true if the key is pressed, otherwise CGI_false
 CGIBool CGIIsKeyPressed(CGIWindow *window, CGIInputKey key)
 {
     int vk_key = CGIKeyToWin32VKKey(key);
@@ -258,6 +277,8 @@ CGIBool CGIIsKeyPressed(CGIWindow *window, CGIInputKey key)
     }
 }
 
+/// @brief Definition of the WindowState structure for Windows implementation
+/// Contains internal Windows-specific window data
 struct WindowState
 {
     HWND hwnd;
@@ -274,6 +295,8 @@ struct WindowState
     MSG msg;
 };
 
+/// @brief Definition of the CGIWindow structure for Windows implementation
+/// Contains window properties and internal state
 struct CGIWindow
 {
     struct WindowState windowState;
@@ -293,6 +316,9 @@ struct CGIWindow
     CGIBool resized;
 };
 
+/// @brief Cleanup and free resources associated with a CGIWindow
+/// @param window Pointer to the CGIWindow to be cleaned up
+/// @return CGI_true if successful, otherwise CGI_false
 CGIBool CGIWindowCleanup(CGIWindow *window)
 {
     if (!window)
@@ -340,6 +366,12 @@ CGIBool CGIWindowCleanup(CGIWindow *window)
     return CGI_true;
 }
 
+/// @brief Initialize a BITMAPINFO structure for the given window and dimensions
+/// @param window Pointer to the CGIWindow
+/// @param bmi Pointer to the BITMAPINFO structure to initialize
+/// @param height Height of the bitmap
+/// @param width Width of the bitmap
+/// @return CGI_true if successful, otherwise CGI_false
 CGIBool MakeBMI(CGIWindow *window, BITMAPINFO *bmi, unsigned int height, unsigned int width)
 {
     if (bmi == NULL || window == NULL)
@@ -387,6 +419,12 @@ CGIBool MakeBMI(CGIWindow *window, BITMAPINFO *bmi, unsigned int height, unsigne
     return CGI_true;
 }
 
+/// @brief Convert the pixel buffer to a COLORREF buffer for the window
+/// @param pixelBuffer Pointer to the pixel buffer
+/// @param window_main_buffer Pointer to the window's main buffer
+/// @param width Width of the buffer
+/// @param height Height of the buffer
+/// @return CGI_true if successful, otherwise CGI_false
 CGIBool LoadBufferView(void *pixelBuffer, COLORREF *window_main_buffer,
                        int width, int height)
 {
@@ -419,6 +457,12 @@ CGIBool LoadBufferView(void *pixelBuffer, COLORREF *window_main_buffer,
     return CGI_true;
 }
 
+/// @brief Windows procedure callback function to handle window messages
+/// @param hwnd Handle to the window
+/// @param msg Message identifier
+/// @param wp Additional message information (WPARAM)
+/// @param lp Additional message information (LPARAM)
+/// @return Result of message processing (LRESULT)
 LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     CGIWindow *window = (CGIWindow *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
@@ -456,9 +500,9 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             return DefWindowProcA(hwnd, msg, wp, lp);
 
         RECT rect;
-        GetWindowRect(window->windowState.hwnd,&rect);
-        window->width = rect.right-rect.left;
-        window->height = rect.bottom-rect.top;
+        GetWindowRect(window->windowState.hwnd, &rect);
+        window->width = rect.right - rect.left;
+        window->height = rect.bottom - rect.top;
 
         GetClientRect(window->windowState.hwnd, &rect);
         unsigned int new_width = rect.right - rect.left;
@@ -487,7 +531,7 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                 MakeBMI(window, &window->windowState.bmi, new_height, new_width);
 
-                window->resized=CGI_true;
+                window->resized = CGI_true;
             }
         }
         break;
@@ -548,6 +592,15 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     return 0;
 }
 
+/// @brief Create a new window with the specified parameters
+/// @param classname classname of the window although some OS may ignore it
+/// @param window_name Name of the window
+/// @param x_pos X position of the window
+/// @param y_pos Y position of the window
+/// @param width Width of the window
+/// @param height Height of the window
+/// @param color Base color of the window
+/// @return Pointer to the created CGIWindow, or NULL on failure
 CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_pos, unsigned int y_pos, unsigned int width, unsigned int height, CGIColor_t color)
 {
     CGIWindow *window = (CGIWindow *)malloc(sizeof(CGIWindow));
@@ -648,6 +701,9 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
     return window;
 }
 
+/// @brief Check if the window is currently focused
+/// @param window Pointer to the CGIWindow structure
+/// @return CGI_true if the window is focused, otherwise CGI_false
 CGIBool CGIIsWindowFocused(CGIWindow *window)
 {
     if (!window || !window->windowState.hwnd)
@@ -661,6 +717,9 @@ CGIBool CGIIsWindowFocused(CGIWindow *window)
     return CGI_false;
 }
 
+/// @brief Update basic states of the window
+/// @param window Pointer to the CGIWindow structure
+/// @return void
 // Will update the non-relying states of window
 void internal_window_basic_update(CGIWindow *window)
 {
@@ -676,16 +735,17 @@ void internal_window_basic_update(CGIWindow *window)
     window->cursor.y = point.y;
 
     window->focused = CGIIsWindowFocused(window);
-    window->resized=CGI_false;
+    window->resized = CGI_false;
 
     window->is_scrolled_x = CGI_false;
     window->scroll_delta_x = 0;
     window->is_scrolled_y = CGI_false;
     window->scroll_delta_y = 0;
-
-    
 }
 
+/// @brief  Show the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @return CGI_true if the window was shown successfully, otherwise CGI_false
 CGIBool CGIShowWindow(CGIWindow *window)
 {
     if (!window || !window->windowState.hwnd)
@@ -701,6 +761,9 @@ CGIBool CGIShowWindow(CGIWindow *window)
     return CGI_true;
 }
 
+/// @brief Check if the window is currently open
+/// @param window Pointer to the CGIWindow structure
+/// @return CGI_true if the window is open, otherwise CGI_false
 CGIBool CGIIsWindowOpen(const CGIWindow *window)
 {
     if (!window)
@@ -709,6 +772,9 @@ CGIBool CGIIsWindowOpen(const CGIWindow *window)
     return window->open;
 }
 
+/// @brief Close the specified window (always the safest way)
+/// @param window Pointer to the CGIWindow structure
+/// @return CGI_true if the window was closed successfully, otherwise CGI_false
 CGIBool CGICloseWindow(CGIWindow *window)
 {
     if (!window)
@@ -719,6 +785,9 @@ CGIBool CGICloseWindow(CGIWindow *window)
     return CGI_true;
 }
 
+/// @brief Refresh the buffer of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @return CGI_true if the buffer was refreshed successfully, otherwise CGI_false
 CGIBool CGIRefreshBuffer(CGIWindow *window)
 {
     if (!window || !window->windowState.hwnd)
@@ -729,6 +798,10 @@ CGIBool CGIRefreshBuffer(CGIWindow *window)
     return CGI_true;
 }
 
+/// @brief Clear the buffer of the specified window with a given color
+/// @param window Pointer to the CGIWindow structure
+/// @param color Color to clear the buffer with
+/// @return CGI_true if the buffer was cleared successfully, otherwise CGI_false
 CGIBool CGIClearBuffer(CGIWindow *window, CGIColor_t color)
 {
     if (!window || !window->windowState.buffer)
@@ -743,6 +816,9 @@ CGIBool CGIClearBuffer(CGIWindow *window, CGIColor_t color)
     return CGI_true;
 }
 
+/// @brief Refresh the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @return CGI_true if the window was refreshed successfully, otherwise CGI_false
 CGIBool CGIRefreshWindow(CGIWindow *window)
 {
     if (!window || !window->windowState.hwnd)
@@ -769,6 +845,12 @@ CGIBool CGIRefreshWindow(CGIWindow *window)
     return CGI_true;
 }
 
+/// @brief Set a pixel at the specified position with the given color
+/// @param window Pointer to the CGIWindow structure
+/// @param x_pos X-coordinate of the pixel
+/// @param y_pos Y-coordinate of the pixel
+/// @param color Color to set the pixel to
+/// @return void
 void CGISetPixel(CGIWindow *window, int x_pos, int y_pos, CGIColor_t color)
 {
     if (!window || !window->windowState.buffer)
@@ -782,151 +864,261 @@ void CGISetPixel(CGIWindow *window, int x_pos, int y_pos, CGIColor_t color)
     window->windowState.buffer[y_pos * window->windowState.buffer_width + x_pos] = RGB(color.r, color.g, color.b);
 }
 
-const void *CGIPerformQuery(CGIQuery query, CGI *cgi, CGIWindow *window)
+/// @brief Perform a query on the CGI or CGIWindow structure
+/// @param query The query to perform
+/// @param acceptor Pointer to the CGI or CGIWindow structure whom to make it accept
+/// @return Pointer to the queried data, or NULL if the query or acceptor is invalid
+
+const void *CGIPerformQuery(CGIQuery query, const void *acceptor)
 {
     switch (query)
     {
     // ---------------- Window-related queries ----------------
     case CGI_query_window_internal_win32_HWND:
-        if (!window)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
+
         return &window->windowState.hwnd;
+    }
 
     case CGI_query_window_internal_win32_HDC:
-        if (!window)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->windowState.hdc;
+    }
 
     case CGI_query_window_internal_win32_BITMAPINFO:
-        if (!window)
+    {
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->windowState.bmi;
+    }
 
     case CGI_query_window_internal_win32_PAINTSTRUCT:
-        if (!window)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->windowState.ps;
+    }
 
     case CGI_query_window_name_charPointer:
-        if (!window || !window->window_name)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->window_name;
+    }
 
     case CGI_query_window_height_unsigned_int:
-        if (!window)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->height;
+    }
 
     case CGI_query_window_width_unsigned_int:
-        if (!window)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->width;
+    }
 
     case CGI_query_window_buffer_height_unsigned_int:
-        if (!window)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->windowState.buffer_height;
+    }
 
     case CGI_query_window_buffer_width_unsigned_int:
-        if (!window)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->windowState.buffer_width;
+    }
 
     case CGI_query_window_base_color_CGIColor_t:
-        if (!window)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->base_color;
+    }
 
     case CGI_query_window_position_CGIPoint:
-        if (!window)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->position;
+    }
 
     case CGI_query_window_open_status_CGIBool:
-        if (!window)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->open;
+    }
 
     case CGI_query_window_cursor_position_CGIPoint:
-        if (!window)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->cursor;
+    }
 
     case CGI_query_window_focus_status_CGIBool:
-        if (!window)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->focused;
+    }
 
     // ---------------- System/CGI-related queries ----------------
     case CGI_query_system_display_width_unsigned_int:
-        if (!cgi)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGI *cgi = (CGI *)acceptor;
         return &cgi->Display.width;
+    }
 
     case CGI_query_system_display_height_unsigned_int:
-        if (!cgi)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGI *cgi = (CGI *)acceptor;
         return &cgi->Display.height;
+    }
 
     case CGI_query_system_display_refresh_rate_unsigned_int:
-        if (!cgi)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGI *cgi = (CGI *)acceptor;
         return &cgi->Display.refresh_rate;
+    }
 
     case CGI_query_system_display_physical_width_unsigned_int:
-        if (!cgi)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGI *cgi = (CGI *)acceptor;
         return &cgi->Display.physical_width;
+    }
 
     case CGI_query_system_display_physical_height_unsigned_int:
-        if (!cgi)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGI *cgi = (CGI *)acceptor;
         return &cgi->Display.physical_height;
+    }
 
     case CGI_query_system_cursor_position_CGIPoint:
-        if (!cgi)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGI *cgi = (CGI *)acceptor;
         return &cgi->Cursor.cursor_position;
+    }
 
     case CGI_query_system_l_button_pressed_CGIBool:
-        if (!cgi)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGI *cgi = (CGI *)acceptor;
         return &cgi->Cursor.l_button_pressed;
+    }
 
     case CGI_query_system_r_button_pressed_CGIBool:
-        if (!cgi)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGI *cgi = (CGI *)acceptor;
         return &cgi->Cursor.r_button_pressed;
+    }
 
     case CGI_query_window_scroll_delta_x_float:
-        if (!window)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->scroll_delta_x;
+    }
 
     case CGI_query_window_scroll_delta_y_float:
     {
-        if (!window)
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->scroll_delta_y;
     }
 
     case CGI_query_window_is_scrolled_x_CGIBool:
-        if (!window)
+    {
+
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->is_scrolled_x;
+    }
 
     case CGI_query_window_is_scrolled_y_CGIBool:
     {
-        if (!window)
+        if (!acceptor)
             return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
         return &window->is_scrolled_y;
     }
 
     default:
         return NULL;
     }
+
+    return NULL;
 }
 
+/// @brief Perform a command on the CGI or CGIWindow structure
+/// @param command The command to perform
+/// @param args Arguments for the command
+/// @param acceptor Pointer to the CGI or CGIWindow structure to accept the command
+/// @return CGI_true if the command was successful, otherwise CGI_false
 CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acceptor)
 {
     switch (command)
@@ -940,34 +1132,36 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
         if (!acceptor)
             return CGI_false;
 
-        CGI **out_cgi = (CGI **)acceptor;
-        *out_cgi = CGIStart();
+        CGI *out_cgi = (CGI *)acceptor;
+        out_cgi = CGIStart();
 
-        return (*out_cgi == NULL) ? CGI_false : CGI_true;
+        return (out_cgi == NULL) ? CGI_false : CGI_true;
     }
     case CGI_command_CGI_update:
     {
         if (!acceptor)
             return CGI_false;
-        CGI **out_cgi = (CGI **)acceptor;
-        return CGIUpdate(*out_cgi);
+        CGI *out_cgi = (CGI *)acceptor;
+        return CGIUpdate(out_cgi);
     }
 
     case CGI_command_CGI_end:
     {
         if (!acceptor)
             return CGI_false;
-        CGI **out_cgi = (CGI **)acceptor;
-        return CGIEnd(*out_cgi);
+        CGI *out_cgi = (CGI *)acceptor;
+        return CGIEnd(out_cgi);
     }
 
-    case CGI_command_CGI_set_cursor_position:{
-        if(!args || !acceptor) return CGI_false;
-        CGI** cgi = (CGI**)acceptor;
-        CGIPoint* point = (CGIPoint*)args;
+    case CGI_command_CGI_set_cursor_position:
+    {
+        if (!args || !acceptor)
+            return CGI_false;
+        CGI *cgi = (CGI *)acceptor;
+        CGIPoint *point = (CGIPoint *)args;
 
-        SetCursorPos(point->x,point->y);
-        CGIUpdate(*cgi);
+        SetCursorPos(point->x, point->y);
+        CGIUpdate(cgi);
 
         return CGI_true;
     }
@@ -976,8 +1170,8 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
 
     case CGI_command_window_cleanup:
     {
-        CGIWindow **window = (CGIWindow **)acceptor;
-        return CGIWindowCleanup(*window);
+        CGIWindow *window = (CGIWindow *)acceptor;
+        return CGIWindowCleanup(window);
     }
 
     case CGI_command_window_set_pixel:
@@ -987,8 +1181,8 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
         if (!acceptor)
             return CGI_false;
         CGIPixel *pixel = (CGIPixel *)args;
-        CGIWindow **window = (CGIWindow **)acceptor;
-        CGISetPixel(*window, pixel->point.x, pixel->point.y,pixel->color);
+        CGIWindow *window = (CGIWindow *)acceptor;
+        CGISetPixel(window, pixel->point.x, pixel->point.y, pixel->color);
         return CGI_true;
     }
 
@@ -996,13 +1190,13 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
     {
         if (!acceptor)
             return CGI_false;
-        return CGIRefreshWindow(*((CGIWindow **)acceptor));
+        return CGIRefreshWindow((CGIWindow *)acceptor);
     }
     case CGI_command_window_refresh_buffer:
     {
         if (!acceptor)
             return CGI_false;
-        return CGIRefreshBuffer(*((CGIWindow **)acceptor));
+        return CGIRefreshBuffer((CGIWindow *)acceptor);
     }
 
     case CGI_command_window_clear_buffer:
@@ -1012,7 +1206,7 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
         if (!acceptor)
             return CGI_false;
 
-        return CGIClearBuffer(*((CGIWindow **)acceptor), *(CGIColor_t *)args);
+        return CGIClearBuffer((CGIWindow *)acceptor, *(CGIColor_t *)args);
     }
 
     case CGI_command_window_set_window_title:
@@ -1022,9 +1216,10 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
         if (!acceptor)
             return CGI_false;
 
-        CGIWindow **window = (CGIWindow **)acceptor;
-        char **title = (char **)args;
-        return (SetWindowTextA((*window)->windowState.hwnd, *title) ? CGI_true : CGI_false);
+        CGIWindow *window = (CGIWindow *)acceptor;
+        char *title = (char *)args;
+        window->window_name = title;
+        return (SetWindowTextA(window->windowState.hwnd, title) ? CGI_true : CGI_false);
     }
 
     case CGI_command_window_set_window_pos:
@@ -1035,8 +1230,8 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
             return CGI_false;
 
         CGIPoint *point = (CGIPoint *)args;
-        CGIWindow **window = (CGIWindow **)acceptor;
-        return (SetWindowPos((*window)->windowState.hwnd, 0, point->x, point->y, 0, 0, SWP_NOSIZE | SWP_NOZORDER) ? CGI_true : CGI_false);
+        CGIWindow *window = (CGIWindow *)acceptor;
+        return (SetWindowPos(window->windowState.hwnd, 0, point->x, point->y, 0, 0, SWP_NOSIZE | SWP_NOZORDER) ? CGI_true : CGI_false);
     }
 
     case CGI_command_window_set_window_size:
@@ -1047,8 +1242,8 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
             return CGI_false;
 
         CGIPoint *point = (CGIPoint *)args;
-        CGIWindow **window = (CGIWindow **)acceptor;
-        return (SetWindowPos((*window)->windowState.hwnd, 0, 0, 0, point->x, point->y, SWP_NOMOVE | SWP_NOZORDER) ? CGI_true : CGI_false);
+        CGIWindow *window = (CGIWindow *)acceptor;
+        return (SetWindowPos(window->windowState.hwnd, 0, 0, 0, point->x, point->y, SWP_NOMOVE | SWP_NOZORDER) ? CGI_true : CGI_false);
     }
 
     case CGI_command_window_set_window_base_color:
@@ -1059,9 +1254,9 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
             return CGI_false;
 
         CGIColor_t *color = (CGIColor_t *)args;
-        CGIWindow **window = (CGIWindow **)acceptor;
+        CGIWindow *window = (CGIWindow *)acceptor;
 
-        (*window)->base_color = *color;
+        window->base_color = *color;
 
         return CGI_true;
     }
@@ -1074,14 +1269,14 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
             return CGI_false;
 
         CGIBool *logic = (CGIBool *)args;
-        CGIWindow **window = (CGIWindow **)acceptor;
+        CGIWindow *window = (CGIWindow *)acceptor;
 
-        ShowWindow((*window)->windowState.hwnd, (*logic ? SW_SHOW : SW_HIDE));
-        
-        UpdateWindow((*window)->windowState.hwnd);
-        
-        (*window)->focused = CGIIsWindowFocused(*window);
-        (*window)->open = CGI_true;
+        ShowWindow(window->windowState.hwnd, (*logic ? SW_SHOW : SW_HIDE));
+
+        UpdateWindow(window->windowState.hwnd);
+
+        window->focused = CGIIsWindowFocused(window);
+        window->open = CGI_true;
 
         return CGI_true;
     }
@@ -1094,9 +1289,9 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
             return CGI_false;
 
         CGIBool *logic = (CGIBool *)args;
-        CGIWindow **window = (CGIWindow **)acceptor;
+        CGIWindow *window = (CGIWindow *)acceptor;
 
-        SetFocus((*logic ? (*window)->windowState.hwnd : NULL));
+        SetFocus((*logic ? window->windowState.hwnd : NULL));
 
         return CGI_true;
     }
@@ -1106,9 +1301,9 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
         if (!acceptor)
             return CGI_false;
 
-        CGIWindow **window = (CGIWindow **)acceptor;
+        CGIWindow *window = (CGIWindow *)acceptor;
 
-        return CGICloseWindow(*window);
+        return CGICloseWindow(window);
     }
 
     case CGI_command_window_resizable_logic:
@@ -1119,9 +1314,9 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
             return CGI_false;
 
         CGIBool *logic = (CGIBool *)args;
-        CGIWindow **window = (CGIWindow **)acceptor;
+        CGIWindow *window = (CGIWindow *)acceptor;
 
-        LONG style = GetWindowLong((*window)->windowState.hwnd, GWL_STYLE);
+        LONG style = GetWindowLong(window->windowState.hwnd, GWL_STYLE);
 
         if (*logic)
         {
@@ -1132,9 +1327,9 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
             style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX | WS_MINIMIZEBOX);
         }
 
-        SetWindowLong((*window)->windowState.hwnd, GWL_STYLE, style);
+        SetWindowLong(window->windowState.hwnd, GWL_STYLE, style);
 
-        SetWindowPos((*window)->windowState.hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+        SetWindowPos(window->windowState.hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 
         return CGI_true;
     }
@@ -1147,9 +1342,9 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
             return CGI_true;
 
         CGIBool *logic = (CGIBool *)args;
-        CGIWindow **window = (CGIWindow **)acceptor;
+        CGIWindow *window = (CGIWindow *)acceptor;
 
-        LONG style = GetWindowLong((*window)->windowState.hwnd, GWL_STYLE);
+        LONG style = GetWindowLong(window->windowState.hwnd, GWL_STYLE);
 
         if (*logic)
         {
@@ -1160,9 +1355,9 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
             style &= ~WS_MINIMIZEBOX;
         }
 
-        SetWindowLong((*window)->windowState.hwnd, GWL_STYLE, style);
+        SetWindowLong(window->windowState.hwnd, GWL_STYLE, style);
 
-        SetWindowPos((*window)->windowState.hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+        SetWindowPos(window->windowState.hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 
         return CGI_true;
     }
@@ -1176,9 +1371,9 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
             return CGI_true;
 
         CGIBool *logic = (CGIBool *)args;
-        CGIWindow **window = (CGIWindow **)acceptor;
+        CGIWindow *window = (CGIWindow *)acceptor;
 
-        LONG style = GetWindowLong((*window)->windowState.hwnd, GWL_STYLE);
+        LONG style = GetWindowLong(window->windowState.hwnd, GWL_STYLE);
 
         if (*logic)
         {
@@ -1189,9 +1384,9 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
             style &= ~WS_MAXIMIZEBOX;
         }
 
-        SetWindowLong((*window)->windowState.hwnd, GWL_STYLE, style);
+        SetWindowLong(window->windowState.hwnd, GWL_STYLE, style);
 
-        SetWindowPos((*window)->windowState.hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+        SetWindowPos(window->windowState.hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 
         return CGI_true;
     }
@@ -1203,101 +1398,263 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
     return CGI_false;
 }
 
-CGIBool CGIIsWindowResized(CGIWindow* window){
+/// @brief Check if the specified window has been resized
+/// @param window Pointer to the CGIWindow structure
+/// @return CGI_true if the window has been resized, otherwise CGI_false
+CGIBool CGIIsWindowResized(CGIWindow *window)
+{
     return window->resized;
 }
 
+/// @brief Get the name of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @return Pointer to the window name string
+char *CGIGetWindowName(CGIWindow *window)
+{
+    return window->window_name;
+}
 
-CGIPoint CGIGetWindowPosition(CGIWindow* window){
+/// @brief Get the position of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @return Position of the window as a CGIPoint structure
+CGIPoint CGIGetWindowPosition(CGIWindow *window)
+{
     return window->position;
 }
 
-unsigned int CGIGetWindowHeight(CGIWindow* window){
+/// @brief Get the height of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @return Height of the window
+unsigned int CGIGetWindowHeight(CGIWindow *window)
+{
     return window->height;
 }
 
-unsigned int CGIGetWindowwidth(CGIWindow* window){
+/// @brief Get the width of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @return Width of the window
+unsigned int CGIGetWindowWidth(CGIWindow *window)
+{
     return window->width;
 }
 
-unsigned int CGIGetWindowBufferHeight(CGIWindow* window){
+/// @brief Get the buffer height of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @return Buffer height of the window
+unsigned int CGIGetWindowBufferHeight(CGIWindow *window)
+{
     return window->windowState.buffer_height;
 }
 
-unsigned int CGIGetWindowBufferWidth(CGIWindow* window){
+/// @brief Get the buffer width of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @return Buffer width of the window
+unsigned int CGIGetWindowBufferWidth(CGIWindow *window)
+{
     return window->windowState.buffer_width;
 }
 
-
-CGIColor_t CGIGetWindowBaseColor(CGIWindow* window){
+/// @brief Get the base color of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @return Base color of the window
+CGIColor_t CGIGetWindowBaseColor(CGIWindow *window)
+{
     return window->base_color;
 }
 
-CGIPoint CGIGetWindowCursorPosition(CGIWindow* window){
+/// @brief Get the cursor position of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @return Cursor position of the window as a CGIPoint structure
+CGIPoint CGIGetWindowCursorPosition(CGIWindow *window)
+{
     return window->cursor;
 }
 
-float CGIGetWindowScrollDeltaX(CGIWindow* window){
+/// @brief Get the horizontal scroll delta of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @return Horizontal scroll delta of the window
+float CGIGetWindowScrollDeltaX(CGIWindow *window)
+{
     return window->scroll_delta_x;
 }
 
-float CGIGetWindowScrollDeltaY(CGIWindow* window){
+/// @brief Get the vertical scroll delta of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @return Vertical scroll delta of the window
+float CGIGetWindowScrollDeltaY(CGIWindow *window)
+{
     return window->scroll_delta_y;
 }
 
-CGIBool CGIIsWindowScrolledX(CGIWindow* window){
+/// @brief Check if the specified window has been scrolled horizontally
+/// @param window Pointer to the CGIWindow structure
+/// @return CGI_true if the window has been scrolled horizontally, otherwise CGI_false
+CGIBool CGIIsWindowScrolledX(CGIWindow *window)
+{
     return window->is_scrolled_x;
 }
 
-CGIBool CGIIsWindowScrolledY(CGIWindow* window){
+/// @brief Check if the specified window has been scrolled vertically
+/// @param window Pointer to the CGIWindow structure
+/// @return CGI_true if the window has been scrolled vertically, otherwise CGI_false
+CGIBool CGIIsWindowScrolledY(CGIWindow *window)
+{
     return window->is_scrolled_y;
 }
 
-CGIBool CGIIsMouseButtonPressed(CGI* cgi,CGIInputKey key){
-    CGIQuery query ;
-    if(key==CGI_input_key_mouse_l){
-        query=CGI_query_system_l_button_pressed_CGIBool;
-    }else if(CGI_input_key_mouse_r){
-        query = CGI_query_system_r_button_pressed_CGIBool;
+/// @brief Check if the specified mouse button is pressed
+/// @param cgi Pointer to the CGI structure
+/// @param key Mouse button key
+/// @return CGI_true if the specified mouse button is pressed, otherwise CGI_false
+CGIBool CGIIsMouseButtonPressed(CGI *cgi, CGIInputKey key)
+{
+    switch (key)
+    {
+    case CGI_input_key_mouse_l:
+    {
+        return cgi->Cursor.l_button_pressed;
     }
-    return *(CGIBool*)CGIPerformQuery(query,cgi,NULL);
+    case CGI_input_key_mouse_r:
+    {
+        return cgi->Cursor.r_button_pressed;
+    }
+    default:
+    {
+        return CGI_false;
+    }
+    }
+
+    return CGI_false;
 }
 
-//commands function
-
-CGIBool CGISetWindowTitle(CGI* cgi, CGIWindow* window,char* title){
-    
-    return CGIPerformCommand(CGI_command_window_set_window_title,&title,&window);
+/// @brief Get the system cursor position
+/// @param cgi Pointer to the CGI structure
+/// @return Cursor position of the system as a CGIPoint structure
+CGIPoint CGIGetSystemCursorPosition(CGI *cgi)
+{
+    return cgi->Cursor.cursor_position;
 }
 
-CGIBool CGISetWindowPosition(CGI* cgi, CGIWindow* window,CGIPoint position){
-    return CGIPerformCommand(CGI_command_window_set_window_pos,&position,&window);
+/// @brief Get the system display height
+/// @param cgi Pointer to the CGI structure
+/// @return Height of the system display
+unsigned int CGIGetSystemDisplayHeight(CGI *cgi)
+{
+    return cgi->Display.height;
 }
 
-CGIBool CGISetWindowSize(CGI*cgi, CGI*window,CGIPoint size){
-    return CGIPerformCommand(CGI_command_window_set_window_size,&size,&window);
+/// @brief Get the system display width
+/// @param cgi Pointer to the CGI structure
+/// @return Width of the system display
+unsigned int CGIGetSystemDisplayWidth(CGI *cgi)
+{
+    return cgi->Display.width;
 }
 
-CGIBool CGISetWindowBaseColor(CGI* cgi, CGIWindow* window,CGIColor_t base_color){
-    return CGIPerformCommand(CGI_command_window_set_window_base_color,&base_color,&window);
+/// @brief Get the system display refresh rate
+/// @param cgi Pointer to the CGI structure
+/// @return Refresh rate of the system display
+unsigned int CGIGetSystemDisplayRefreshRate(CGI *cgi)
+{
+    return cgi->Display.refresh_rate;
 }
 
-CGIBool CGISetWindowShowLogic(CGI* cgi, CGIWindow* window,CGIBool logic){
-    return CGIPerformCommand(CGI_command_window_set_window_show_status,&logic,&window);
+/// @brief Get the physical height of the system display
+/// @param cgi Pointer to the CGI structure
+/// @return Physical height of the system display
+unsigned int CGIGetSystemDisplayPhysicalHeight(CGI *cgi)
+{
+    return cgi->Display.physical_height;
 }
 
-CGIBool CGISetWindowFocusLogic(CGI* cgi, CGIWindow* window, CGIBool logic){
-    return CGIPerformCommand(CGI_command_window_set_focus_status,&logic,&window);
+/// @brief Get the physical width of the system display
+/// @param cgi Pointer to the CGI structure
+/// @return Physical width of the system display
+unsigned int CGIGetSystemDisplayPhysicalWidth(CGI *cgi)
+{
+    return cgi->Display.physical_width;
 }
 
-CGIBool CGISetWindowResizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic){
-    return CGIPerformCommand(CGI_command_window_resizable_logic,&logic,&window);
+// commands function
+
+/// @brief Set the title of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @param title New title for the window
+/// @return CGI_true if the operation was successful, otherwise CGI_false
+CGIBool CGISetWindowTitle(CGIWindow *window, char *title)
+{
+
+    return CGIPerformCommand(CGI_command_window_set_window_title, title, window);
 }
 
-CGIBool CGISetWindowMinimizableLogic(CGI* cgi, CGIWindow* window, CGIBool logic){
-    return CGIPerformCommand(CGI_command_window_minimizable_logic,&logic,&window);
+/// @brief Set the position of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @param position New position for the window
+/// @return CGI_true if the operation was successful, otherwise CGI_false
+CGIBool CGISetWindowPosition(CGIWindow *window, CGIPoint position)
+{
+    return CGIPerformCommand(CGI_command_window_set_window_pos, &position, window);
 }
 
-CGIBool CGISetWindowMaximizableLogic(CGI* cgi, CGIWindow* window,CGIBool logic){
-    return CGIPerformCommand(CGI_command_window_maximizable_logic,&logic,&window);
+/// @brief Set the size of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @param size New size for the window
+/// @return CGI_true if the operation was successful, otherwise CGI_false
+CGIBool CGISetWindowSize(CGIWindow *window, CGIPoint size)
+{
+    return CGIPerformCommand(CGI_command_window_set_window_size, &size, window);
+}
+
+/// @brief Set the base color of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @param base_color New base color for the window
+/// @return CGI_true if the operation was successful, otherwise CGI_false
+CGIBool CGISetWindowBaseColor(CGIWindow *window, CGIColor_t base_color)
+{
+    return CGIPerformCommand(CGI_command_window_set_window_base_color, &base_color, window);
+}
+
+/// @brief Set the show logic of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @param logic New show logic for the window
+/// @return CGI_true if the operation was successful, otherwise CGI_false
+CGIBool CGISetWindowShowLogic(CGIWindow *window, CGIBool logic)
+{
+    return CGIPerformCommand(CGI_command_window_set_window_show_status, &logic, window);
+}
+
+/// @brief Set the focus logic of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @param logic New focus logic for the window
+/// @return CGI_true if the operation was successful, otherwise CGI_false
+CGIBool CGISetWindowFocusLogic(CGIWindow *window, CGIBool logic)
+{
+    return CGIPerformCommand(CGI_command_window_set_focus_status, &logic, window);
+}
+
+/// @brief Set the resizable logic of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @param logic New resizable logic for the window
+/// @return CGI_true if the operation was successful, otherwise CGI_false
+CGIBool CGISetWindowResizableLogic(CGIWindow *window, CGIBool logic)
+{
+    return CGIPerformCommand(CGI_command_window_resizable_logic, &logic, window);
+}
+
+/// @brief Set the minimizable logic of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @param logic New minimizable logic for the window
+/// @return CGI_true if the operation was successful, otherwise CGI_false
+CGIBool CGISetWindowMinimizableLogic(CGIWindow *window, CGIBool logic)
+{
+    return CGIPerformCommand(CGI_command_window_minimizable_logic, &logic, window);
+}
+
+/// @brief Set the maximizable logic of the specified window
+/// @param window Pointer to the CGIWindow structure
+/// @param logic New maximizable logic for the window
+/// @return CGI_true if the operation was successful, otherwise CGI_false
+CGIBool CGISetWindowMaximizableLogic(CGIWindow *window, CGIBool logic)
+{
+    return CGIPerformCommand(CGI_command_window_maximizable_logic, &logic, window);
 }
