@@ -20,8 +20,19 @@ CGIBool getPixelState(char c, unsigned int x, unsigned int y)
 
 // void drawChar(CGIWindow* window)
 
+/// @brief Write text to the specified window at given position with scaling and color
+/// @param window Pointer to the CGIWindow instance
+/// @param text The text string to be rendered
+/// @param x_pos The x position to start rendering the text
+/// @param y_pos The y position to start rendering the text
+/// @param x_spacing The horizontal spacing between characters
+/// @param y_spacing The vertical spacing between lines
+/// @param h_scale The horizontal scaling factor for the text
+/// @param v_scale The vertical scaling factor for the text
+/// @param color The color to render the text in
 CGIBool CGIWriteText(CGIWindow *window, char *text, unsigned int x_pos, unsigned int y_pos,
-                     unsigned int x_spacing, unsigned int y_spacing, unsigned int h_scale, unsigned int v_scale, CGIColor_t color)
+                     unsigned int x_spacing, unsigned int y_spacing, unsigned int h_scale, unsigned int v_scale,
+                     unsigned int offset, CGIColor_t color)
 {
     if (!window || !text)
     {
@@ -35,7 +46,7 @@ CGIBool CGIWriteText(CGIWindow *window, char *text, unsigned int x_pos, unsigned
         return CGI_true;
     }
 
-    int x = x_pos;
+    int x = x_pos + (8 + x_spacing) * h_scale * offset; // Start position
     int y = y_pos;
 
     int line_no = 0;
@@ -68,7 +79,7 @@ CGIBool CGIWriteText(CGIWindow *window, char *text, unsigned int x_pos, unsigned
                     {
                         for (int v = 0; v < v_scale; v++)
                         {
-                            CGISetPixel(window, x + (8 - j)*h_scale + h, y + k*v_scale + v, color);
+                            CGISetPixel(window, x + (8 - j) * h_scale + h, y + k * v_scale + v, color);
                         }
                     }
 

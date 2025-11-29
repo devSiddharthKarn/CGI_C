@@ -46,8 +46,10 @@ int main(){
         CGIRefreshWindow(window);
         CGIClearBuffer(window,CGIMakeColor(123,222,12));
 
-        CGIWriteText(window,texts[i],40,40,1,1,3,3,CGIMakeColor(10,33,111));
-
+        // CGIWriteText(window,texts[i],40,40,1,1,3,3,2,CGIMakeColor(10,33,111));
+        // CGIWriteText(window,texts[i],40,40,1,1,3,3,);
+        
+        CGIWriteText(window,"skdhadhkashdkashdkajshdkajshdkahkdhssssssssssssssssssdaaaasdadasdadasdasdasdasdadasdasdadadasdarsefdfsdfsdfsdfsdfsdf4tetertertertertertaskdhaskdh",0,0,1,1,1,1,2,CGIMakeColor(10,22,111));
         i+=1;
         if(i>5){
             i=0;
