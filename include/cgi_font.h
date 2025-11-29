@@ -31,8 +31,10 @@ CGI_BEGIN_DECLS
 /// @param y_spacing The vertical spacing between lines
 /// @param h_scale The horizontal scaling factor for the text
 /// @param v_scale The vertical scaling factor for the text
+/// @param offset The character offset to start rendering from
+/// @param line_wrap Enable or disable line wrapping
 /// @param color The color to render the text in
-CGIBool CGIWriteText(CGIWindow *window, char *text, unsigned int x_pos, unsigned int y_pos, unsigned int x_spacing, unsigned int y_spacing, unsigned int h_scale, unsigned int v_scale,unsigned int offset, CGIColor_t color);
+CGIBool CGIWriteText(CGIWindow *window, char *text, unsigned int x_pos, unsigned int y_pos, unsigned int x_spacing, unsigned int y_spacing, unsigned int h_scale, unsigned int v_scale,unsigned int offset, CGIBool line_wrap, CGIColor_t color);
 
 CGI_END_DECLS
 #endif

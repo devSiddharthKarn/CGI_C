@@ -29,10 +29,12 @@ CGIBool getPixelState(char c, unsigned int x, unsigned int y)
 /// @param y_spacing The vertical spacing between lines
 /// @param h_scale The horizontal scaling factor for the text
 /// @param v_scale The vertical scaling factor for the text
+/// @param offset The character offset to start rendering from
+/// @param line_wrap Enable or disable line wrapping
 /// @param color The color to render the text in
 CGIBool CGIWriteText(CGIWindow *window, char *text, unsigned int x_pos, unsigned int y_pos,
                      unsigned int x_spacing, unsigned int y_spacing, unsigned int h_scale, unsigned int v_scale,
-                     unsigned int offset, CGIColor_t color)
+                     unsigned int offset,CGIBool line_wrap, CGIColor_t color)
 {
     if (!window || !text)
     {
@@ -61,11 +63,14 @@ CGIBool CGIWriteText(CGIWindow *window, char *text, unsigned int x_pos, unsigned
             continue;
         }
 
-        if (x + 8 * h_scale > CGIGetWindowBufferWidth(window))
-        {
-            x = x_pos;
-            line_no++;
-            y = y_pos + (8 + y_spacing) * line_no * v_scale;
+        if(line_wrap){
+
+            if (x + 8 * h_scale > CGIGetWindowBufferWidth(window))
+            {
+                x = x_pos;
+                line_no++;
+                y = y_pos + (8 + y_spacing) * line_no * v_scale;
+            }
         }
 
         for (int j = 0; j < 8; j++) // x within character
