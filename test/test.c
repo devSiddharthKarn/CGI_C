@@ -1,7 +1,9 @@
 #include "../include/cgi.h"
 #include "../include/cgi_font.h"
 
-#include "string.h"
+#include <string.h>
+#include <stdio.h>
+#include <time.h>
 
 #ifdef _WIN32
 #include "Windows.h"
@@ -11,56 +13,75 @@
 #define SLEEP(seconds) sleep(seconds);
 #endif
 
-
-// int count_char(int n){
-//     int count=0;
-//     while(n!=0){
-//         count++;
-//         n/=10;
-//     }
-
-//     return count;
-// }
-
-// char* intToChar(int n){
-//     int mem = count_char(n);
-//     char ret[mem];
-// }
-
 int main(){
 
+    // Start CGI system
     CGI* cgi = CGIStart();
 
-    CGIWindow * window = CGICreateWindow("window","window",50,50,500,500,CGIMakeColor(123,222,12));
+    // Create window
+    CGIWindow *window = CGICreateWindow(
+        "window", "window",
+        50, 50, 500, 500,
+        CGIMakeColor(123,222,12)
+    );
 
     CGIShowWindow(window);
 
-    int i =0;
+    // FPS variables
+    int fps = 0;
+    int frames = 0;
+    double lastTime = 0;
 
+    char sentence[10000] = "Hello and this is me!";
 
-    char *texts[]={"Siddharth","Seema","Yaron","Ram","Shyam","hari"};
-    
+    // Main loop
+    while (CGIIsWindowOpen(window)) {
 
-    while(CGIIsWindowOpen(window)){
-        CGIUpdate(cgi);
-        CGIRefreshWindow(window);
-        CGIClearBuffer(window,CGIMakeColor(123,222,12));
+        // Time tracking for FPS
+        double currentTime = clock() / (double)CLOCKS_PER_SEC;
+        frames++;
 
-        // CGIWriteText(window,texts[i],40,40,1,1,3,3,2,CGIMakeColor(10,33,111));
-        // CGIWriteText(window,texts[i],40,40,1,1,3,3,);
-        
-        CGIWriteText(window,"skdhadhkashdkashdkajshdkajshdkahkdhssssssssssssssssssdaaaasdadasdadasdasdasdasdadasdasdadadasdarsefdfsdfsdfsdfsdfsdf4tetertertertertertaskdhaskdh",0,0,1,1,1,1,2,CGIMakeColor(10,22,111));
-        i+=1;
-        if(i>5){
-            i=0;
+        if (currentTime - lastTime >= 1.0) {
+            fps = frames;
+            frames = 0;
+            lastTime = currentTime;
         }
 
-        // _sleep(1000);
+        CGIUpdate(cgi);
+        CGIRefreshWindow(window);
+        CGIClearBuffer(window, CGIMakeColor(123,222,12));
+
+        // ========================
+        //      DRAW FPS TEXT
+        // ========================
+        char fpsText[64];
+        sprintf(fpsText, "FPS: %d", fps);
+
+        CGIWriteText(
+            window,
+            fpsText,
+            10, 10,        // Position
+            1, 1,          // Spacing
+            2, 2,          // Scale (2x bigger)
+            1,             // thickness or your parameter
+            CGIMakeColor(0,0,0)
+        );
+
+        // Example: draw another text
+        CGIWriteText(
+            window,
+            sentence,
+            10, 60,
+            1, 1,
+            1, 1,
+            1,
+            CGIMakeColor(0,0,0)
+        );
+
         CGIRefreshBuffer(window);
-
-        SLEEP(1);
-
-
+        // Optional lower CPU usage
+        // SLEEP(0.001);
     }
 
+    return 0;
 }
