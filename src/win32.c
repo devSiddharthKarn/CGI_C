@@ -425,23 +425,27 @@ CGIBool MakeBMI(CGIWindow *window, BITMAPINFO *bmi, unsigned int height, unsigne
 /// @param width Width of the buffer
 /// @param height Height of the buffer
 /// @return CGI_true if successful, otherwise CGI_false
-CGIBool LoadBufferView(void *pixelBuffer, COLORREF *window_main_buffer,
-                       int width, int height)
+CGIBool LoadBufferView(CGIWindow *window, int x_pos, int y_pos, int width, int height)
 {
+
+    void *pixelBuffer = window->windowState.pixelbuffer;
+    COLORREF *window_main_buffer = window->windowState.buffer;
+
     if (!pixelBuffer || !window_main_buffer)
         return CGI_false;
 
     unsigned char *buf = (unsigned char *)pixelBuffer;
 
-    int rowSize = (width * 3 + 3) & ~3; // align scanline to 4 bytes
+    int rowSize = (window->windowState.buffer_width * 3 + 3) & ~3; // align scanline to 4 bytes
 
-    for (int y = 0; y < height; y++)
+    for (int y = y_pos; y < height; y++)
     {
         unsigned char *row = buf + y * rowSize;
 
-        for (int x = 0; x < width; x++)
+        for (int x = x_pos; x < width; x++)
         {
-            int srcPos = y * width + x;
+
+            int srcPos = y * window->windowState.buffer_width + x;
 
             unsigned char r = GetRValue(window_main_buffer[srcPos]);
             unsigned char g = GetGValue(window_main_buffer[srcPos]);
@@ -455,6 +459,36 @@ CGIBool LoadBufferView(void *pixelBuffer, COLORREF *window_main_buffer,
     }
 
     return CGI_true;
+}
+
+void CGIRefreshBufferRegion(CGIWindow *window, int x, int y, int width, int height)
+{
+    int bw = window->windowState.buffer_width;
+    int bh = window->windowState.buffer_height;
+
+    // Completely outside → return
+    if (x >= bw || y >= bh || x + width <= 0 || y + height <= 0)
+        return;
+
+    // ---- CLIP THE REGION (very important) ----
+
+    int clippedX = x < 0 ? 0 : x;
+    int clippedY = y < 0 ? 0 : y;
+
+    int clippedW = (x + width > bw) ? (bw - clippedX) : (width - (clippedX - x));
+    int clippedH = (y + height > bh) ? (bh - clippedY) : (height - (clippedY - y));
+
+    // Convert pixels from logical window buffer → pixelBuffer
+    LoadBufferView(window, clippedX, clippedY, clippedW, clippedH);
+
+    // Copy the correct region from offscreenBuffer → window DC
+    BitBlt(window->windowState.hdc,
+           clippedX, clippedY, clippedW, clippedH,
+           window->windowState.offscreenBuffer,
+           clippedX, clippedY,
+           SRCCOPY);
+
+    return;
 }
 
 /// @brief Windows procedure callback function to handle window messages
@@ -484,14 +518,17 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
         BeginPaint(hwnd, &window->windowState.ps);
 
-        LoadBufferView(window->windowState.pixelbuffer, window->windowState.buffer,
+        LoadBufferView(window, 0, 0,
                        window->windowState.buffer_width, window->windowState.buffer_height);
 
-        BitBlt(window->windowState.hdc, 0, 0, window->windowState.buffer_width,
-               window->windowState.buffer_height, window->windowState.offscreenBuffer, 0, 0, SRCCOPY);
+        BitBlt(window->windowState.hdc, 0, 0, window->windowState.buffer_width, window->windowState.buffer_height, window->windowState.offscreenBuffer, 0, 0, SRCCOPY);
 
         EndPaint(hwnd, &window->windowState.ps);
-        return 0;
+
+        // // HRGN rgn= CreateRectRgn(0,0,)
+        // CombineRgn(,)
+
+        return TRUE;
     }
 
     case WM_SIZE:
@@ -544,7 +581,7 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
         window->open = CGI_false;
         DestroyWindow(hwnd);
-        return 0;
+        return TRUE;
     }
 
     case WM_MOVE:
@@ -581,7 +618,7 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
         window->open = CGI_false;
         PostQuitMessage(0);
-        return 0;
+        return TRUE;
     }
 
     default:
@@ -589,7 +626,7 @@ LRESULT CALLBACK windows_procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         return DefWindowProcA(hwnd, msg, wp, lp);
     }
     }
-    return 0;
+    return TRUE;
 }
 
 /// @brief Create a new window with the specified parameters
@@ -809,6 +846,7 @@ CGIBool CGIClearBuffer(CGIWindow *window, CGIColor_t color)
 
     unsigned int size = window->windowState.buffer_height * window->windowState.buffer_width;
     COLORREF refcolor = RGB(color.r, color.g, color.b);
+
     for (unsigned int i = 0; i < size; i++)
     {
         window->windowState.buffer[i] = refcolor;
@@ -816,10 +854,41 @@ CGIBool CGIClearBuffer(CGIWindow *window, CGIColor_t color)
     return CGI_true;
 }
 
+
+void CGIClearBufferRegion(CGIWindow *window, int x, int y, int width, int height, CGIColor_t color)
+{
+
+    if (!window || !window->windowState.buffer)
+        return;
+
+    int bw = window->windowState.buffer_width;
+    int bh = window->windowState.buffer_height;
+
+    // Completely outside → return
+    if (x >= bw || y >= bh || x + width <= 0 || y + height <= 0)
+        return;
+
+    // ---- CLIP THE REGION (very important) ----
+
+    int clippedX = x < 0 ? 0 : x;
+    int clippedY = y < 0 ? 0 : y;
+
+    int clippedW = (x + width > bw) ? (bw - clippedX) : (width - (clippedX - x));
+    int clippedH = (y + height > bh) ? (bh - clippedY) : (height - (clippedY - y));
+
+    for (int i = clippedY; i < clippedY + clippedH; i++)
+    {
+        for (int j = clippedX; j < clippedX + clippedW; j++)
+        {
+            window->windowState.buffer[i * window->windowState.buffer_width + j] = RGB(color.r, color.g, color.b);
+        }
+    }
+}
+
 /// @brief Refresh the specified window
 /// @param window Pointer to the CGIWindow structure
 /// @return CGI_true if the window was refreshed successfully, otherwise CGI_false
-CGIBool CGIRefreshWindow(CGIWindow *window)
+CGIBool CGIRefreshWindow(CGIWindow *window, CGIWindowRefreshMode window_refresh_mode)
 {
     if (!window || !window->windowState.hwnd)
         return CGI_false;
@@ -830,19 +899,40 @@ CGIBool CGIRefreshWindow(CGIWindow *window)
     }
 
     internal_window_basic_update(window);
-    while (PeekMessageA(&window->windowState.msg, NULL, 0, 0, PM_REMOVE))
+
+    if (window_refresh_mode == CGI_window_refresh_mode_rapid)
     {
-        if (window->windowState.msg.message == WM_QUIT)
+
+        while (PeekMessageA(&window->windowState.msg, NULL, 0, 0, PM_REMOVE))
         {
-            window->open = CGI_false;
-            return CGI_false;
+            if (window->windowState.msg.message == WM_QUIT)
+            {
+                window->open = CGI_false;
+                return CGI_true;
+            }
+            TranslateMessage(&window->windowState.msg);
+            DispatchMessageA(&window->windowState.msg);
         }
-        TranslateMessage(&window->windowState.msg);
-        DispatchMessageA(&window->windowState.msg);
+        return CGI_true;
     }
 
+    if (window_refresh_mode == CGI_window_refresh_mode_triggered)
+    {
+        while (GetMessageA(&window->windowState.msg, NULL, 0, 0))
+        {
+            if (window->windowState.msg.message == WM_QUIT)
+            {
+                window->open = CGI_false;
+                return CGI_true;
+            }
+            TranslateMessage(&window->windowState.msg);
+            DispatchMessageA(&window->windowState.msg);
+        }
+        return CGI_true;
+    }
+
+    return CGI_false;
     // Update window states
-    return CGI_true;
 }
 
 /// @brief Set a pixel at the specified position with the given color
@@ -1186,12 +1276,21 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
         return CGI_true;
     }
 
-    case CGI_command_window_refresh_window:
+    case CGI_command_window_refresh_window_rapid:
     {
         if (!acceptor)
             return CGI_false;
-        return CGIRefreshWindow((CGIWindow *)acceptor);
+        return CGIRefreshWindow((CGIWindow *)acceptor, CGI_window_refresh_mode_rapid);
     }
+
+    case CGI_command_window_refresh_window_triggered:
+    {
+        if (!acceptor)
+            return CGI_false;
+
+        return CGIRefreshWindow((CGIWindow *)acceptor, CGI_window_refresh_mode_triggered);
+    }
+
     case CGI_command_window_refresh_buffer:
     {
         if (!acceptor)

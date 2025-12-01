@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
- /// @file linux.c
+/// @file linux.c
 #define CGI_LINUX_IMPLEMENTATION_ACTIVE
 #include "cgi.h"
 #include "X11/Xlib.h"
@@ -148,7 +148,6 @@ CGIBool CGIUpdate(CGI *cgi)
 
     return CGI_true;
 }
-
 
 /// @brief Ends the CGI instance on Linux and frees resources
 /// @param cgi Pointer to the CGI instance
@@ -354,6 +353,37 @@ CGIBool CGIClearBuffer(CGIWindow *window, CGIColor_t color)
     return CGI_true;
 }
 
+void CGIClearBufferRegion(CGIWindow *window, int x, int y, int width, int height, CGIColor_t color)
+{
+    if (!window || !window->buffer.image)
+        return;
+
+    int bw = window->buffer.width;
+    int bh = window->buffer.height;
+
+    // Completely outside → return
+    if (x >= bw || y >= bh || x + width <= 0 || y + height <= 0)
+        return;
+
+    // ---- CLIP THE REGION (very important) ----
+
+    int clippedX = x < 0 ? 0 : x;
+    int clippedY = y < 0 ? 0 : y;
+
+    int clippedW = (x + width > bw) ? (bw - clippedX) : (width - (clippedX - x));
+    int clippedH = (y + height > bh) ? (bh - clippedY) : (height - (clippedY - y));
+
+    unsigned int pixel = 0xFF000000 | (color.r << 16) | (color.g << 8) | (color.b);
+
+    for (int i = clippedY; i < clippedY + clippedH; i++)
+    {
+        for (int j = clippedX; j < clippedX + clippedW; j++)
+        {
+            window->buffer.pixels[i * window->buffer.width + j] = pixel;
+        }
+    }
+}
+
 /// @brief Refreshes the CGI window's buffer and updates the display
 /// @param window Pointer to the CGI window
 /// @return CGI_true on success, CGI_false on failure
@@ -366,6 +396,32 @@ CGIBool CGIRefreshBuffer(CGIWindow *window)
 
     XFlush(window->windowState.display);
     return CGI_true;
+}
+
+void CGIRefreshBufferRegion(CGIWindow *window, int x, int y, int width, int height)
+{
+    if (!window || !window->buffer.pixels || !window->buffer.image)
+        return;
+
+    int bw = window->buffer.width;
+    int bh = window->buffer.height;
+
+    // Completely outside → return
+    if (x >= bw || y >= bh || x + width <= 0 || y + height <= 0)
+        return;
+
+    // ---- CLIP THE REGION (very important) ----
+
+    int clippedX = x < 0 ? 0 : x;
+    int clippedY = y < 0 ? 0 : y;
+
+    int clippedW = (x + width > bw) ? (bw - clippedX) : (width - (clippedX - x));
+    int clippedH = (y + height > bh) ? (bh - clippedY) : (height - (clippedY - y));
+
+    XPutImage(window->windowState.display, window->windowState.window, window->windowState.gc, window->buffer.image,
+              clippedX, clippedY, // src_x, src_y in ximage
+              clippedX, clippedY, // dest_x, dest_y in window
+              clippedW, clippedH);
 }
 
 /// @brief Converts a CGI input key to an X11 KeySym
@@ -501,11 +557,10 @@ KeySym CGIInputKeyToKeySym(CGIInputKey key)
     return NoSymbol;
 }
 
-
 /// @brief Checks if a specific key is currently pressed in the CGI window
 /// @param window Pointer to the CGI window
 /// @param key CGI input key to check
-/// @return CGI_true if the key is pressed, CGI_false otherwise 
+/// @return CGI_true if the key is pressed, CGI_false otherwise
 CGIBool CGIIsKeyPressed(CGIWindow *window, CGIInputKey key)
 {
     if (!window || !window->windowState.display)
@@ -530,9 +585,6 @@ CGIBool CGIIsKeyPressed(CGIWindow *window, CGIInputKey key)
 
     return CGI_false;
 }
-
-
-
 
 /// @brief Resizes the buffer of a CGI window
 /// @param window Pointer to the CGI window
@@ -666,7 +718,7 @@ XColor MakeColor(CGIWindow *window, CGIColor_t color)
 
 /// @brief              Creates a CGI window with the specified parameters
 /// @param classname    add a classname for the window although it is not used in linux
-/// @param window_name  The name of the window 
+/// @param window_name  The name of the window
 /// @param x_pos the x position of the window
 /// @param y_pos the y position of the window
 /// @param width the width of the window
@@ -911,19 +963,33 @@ void internal_window_basic_update(CGIWindow *window)
 /// @brief Refreshes the CGI window by processing pending X events
 /// @param window Pointer to the CGI window
 /// @return CGI_true on success, CGI_false on failure
-CGIBool CGIRefreshWindow(CGIWindow *window)
+CGIBool CGIRefreshWindow(CGIWindow *window, CGIWindowRefreshMode window_refresh_mode)
 {
     if (!window || !window->windowState.display)
         return CGI_false;
 
     internal_window_basic_update(window);
-    while (XPending(window->windowState.display))
+
+    if (window_refresh_mode == CGI_window_refresh_mode_rapid)
     {
-        XNextEvent(window->windowState.display, &window->windowState.event);
-        process_events(window, &window->windowState.event);
+        while (XPending(window->windowState.display))
+        {
+            XNextEvent(window->windowState.display, &window->windowState.event);
+            process_events(window, &window->windowState.event);
+        }
+        return CGI_true;
     }
 
-    return CGI_true;
+    if (window_refresh_mode == CGI_window_refresh_mode_triggered)
+    {
+
+        XNextEvent(window->windowState.display, &window->windowState.event);
+        process_events(window, &window->windowState.event);
+
+        return CGI_true;
+    }
+
+    return CGI_false;
 }
 
 /// @brief Performs a query on the CGI system or window
@@ -946,7 +1012,7 @@ const void *CGIPerformQuery(CGIQuery query, const void *acceptor)
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGIWindow *window = (CGIWindow *)acceptor;
         return &window->cursor;
     }
@@ -955,101 +1021,101 @@ const void *CGIPerformQuery(CGIQuery query, const void *acceptor)
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGIWindow *window = (CGIWindow *)acceptor;
         return &window->width;
-    } 
+    }
 
     case CGI_query_window_height_unsigned_int:
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGIWindow *window = (CGIWindow *)acceptor;
         return &window->height;
-    }  
+    }
 
     case CGI_query_window_buffer_width_unsigned_int:
-       {
+    {
 
-           if (!acceptor)
-           return NULL;
-           CGIWindow *window = (CGIWindow *)acceptor;
-           return &window->buffer_width;
-        }
+        if (!acceptor)
+            return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
+        return &window->buffer_width;
+    }
 
     case CGI_query_window_buffer_height_unsigned_int:
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGIWindow *window = (CGIWindow *)acceptor;
         return &window->buffer_height;
-    }    
+    }
 
     case CGI_query_window_position_CGIPoint:
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGIWindow *window = (CGIWindow *)acceptor;
         return &window->position;
-    }    
+    }
 
     case CGI_query_window_open_status_CGIBool:
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGIWindow *window = (CGIWindow *)acceptor;
         return &window->open;
-    }    
+    }
 
     case CGI_query_window_base_color_CGIColor_t:
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGIWindow *window = (CGIWindow *)acceptor;
         return &window->CGIbase_color;
-    }    
+    }
 
     case CGI_query_window_focus_status_CGIBool:
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGIWindow *window = (CGIWindow *)acceptor;
         return &window->focused;
-    }    
+    }
 
     // ---------------- System/CGI-related queries ----------------
     case CGI_query_system_cursor_position_CGIPoint:
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGI *cgi = (CGI *)acceptor;
         return &cgi->Cursor.cursor_position;
-    }    
+    }
 
     case CGI_query_system_display_height_unsigned_int:
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGI *cgi = (CGI *)acceptor;
         return &cgi->Display.height;
-    }    
+    }
 
     case CGI_query_system_display_width_unsigned_int:
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGI *cgi = (CGI *)acceptor;
         return &cgi->Display.width;
-    }    
+    }
 
     case CGI_query_system_display_physical_height_unsigned_int:
     {
@@ -1125,7 +1191,7 @@ const void *CGIPerformQuery(CGIQuery query, const void *acceptor)
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGIWindow *window = (CGIWindow *)acceptor;
         return &window->windowState.display;
     }
@@ -1134,46 +1200,46 @@ const void *CGIPerformQuery(CGIQuery query, const void *acceptor)
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGIWindow *window = (CGIWindow *)acceptor;
         return &window->windowState.screen;
-    } 
+    }
 
     case CGI_query_window_internal_linux_Xlib_window_Window:
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGIWindow *window = (CGIWindow *)acceptor;
         return &window->windowState.window;
-    }  
+    }
 
     case CGI_query_window_internal_linux_Xlib_colormap_Colormap:
-       {
+    {
 
-           if (!acceptor)
-           return NULL;
-           CGIWindow *window = (CGIWindow *)acceptor;
-           return &window->windowState.colormap;
-        }
+        if (!acceptor)
+            return NULL;
+        CGIWindow *window = (CGIWindow *)acceptor;
+        return &window->windowState.colormap;
+    }
 
     case CGI_query_window_internal_linux_Xlib_GC:
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGIWindow *window = (CGIWindow *)acceptor;
         return &window->windowState.gc;
-    }    
+    }
 
     case CGI_query_window_internal_linux_Xlib_type_base_color_XColor:
     {
 
         if (!acceptor)
-        return NULL;
+            return NULL;
         CGIWindow *window = (CGIWindow *)acceptor;
         return &window->windowState.base_color;
-    }    
+    }
 
     default:
         break;
@@ -1249,13 +1315,21 @@ CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acce
         return CGI_true;
     }
 
-    case CGI_command_window_refresh_window:
+    case CGI_command_window_refresh_window_rapid:
     {
         if (!acceptor)
             return CGI_false;
 
         CGIWindow *window = (CGIWindow *)acceptor;
-        return CGIRefreshWindow(window);
+        return CGIRefreshWindow(window, CGI_window_refresh_mode_rapid);
+    }
+
+    case CGI_command_window_refresh_window_triggered:
+    {
+        if (!acceptor)
+            return CGI_false;
+        CGIWindow *window = (CGIWindow *)acceptor;
+        return CGIRefreshWindow(window, CGI_window_refresh_mode_triggered);
     }
 
     case CGI_command_window_refresh_buffer:
@@ -1478,11 +1552,11 @@ CGIBool CGIIsWindowResized(CGIWindow *window)
     return window->resized;
 }
 
-
 /// @brief Gets the name of the CGI window
 /// @param window Pointer to the CGI window
 /// @return Pointer to the window name string
-char * CGIGetWindowName(CGIWindow* window){
+char *CGIGetWindowName(CGIWindow *window)
+{
     return window->name;
 }
 
@@ -1519,7 +1593,6 @@ unsigned int CGIGetWindowBufferHeight(CGIWindow *window)
     return window->buffer_height;
 }
 
-
 /// @brief Gets the buffer width of the CGI window
 /// @param window Pointer to the CGI window
 /// @return Buffer width of the window
@@ -1536,7 +1609,6 @@ CGIColor_t CGIGetWindowBaseColor(CGIWindow *window)
     return window->CGIbase_color;
 }
 
-
 /// @brief Gets the cursor position of the CGI window
 /// @param window Pointer to the CGI window
 /// @return CGIPoint representing the cursor position
@@ -1544,7 +1616,6 @@ CGIPoint CGIGetWindowCursorPosition(CGIWindow *window)
 {
     return window->cursor;
 }
-
 
 /// @brief Gets the scroll delta in the X direction of the CGI window
 /// @param window Pointer to the CGI window

@@ -44,6 +44,11 @@ typedef enum
     CGI_true = 1
 } CGIBool;
 
+typedef enum{
+    CGI_window_refresh_mode_rapid=1,
+    CGI_window_refresh_mode_triggered
+}CGIWindowRefreshMode;
+
 /// @brief structure to represent 2d pixel points (type int)
 typedef struct
 {
@@ -120,7 +125,8 @@ typedef enum
     //  CGI_command_window_create_window,
     CGI_command_window_cleanup,
     CGI_command_window_set_pixel,
-    CGI_command_window_refresh_window,
+    CGI_command_window_refresh_window_rapid,
+    CGI_command_window_refresh_window_triggered,
     CGI_command_window_refresh_buffer,
     CGI_command_window_clear_buffer,
     CGI_command_window_set_window_title,

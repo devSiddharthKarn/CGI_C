@@ -17,6 +17,8 @@
 #ifndef CGI_FONT_RASTER_H
 #define CGI_FONT_RASTER_H
 
+#pragma once
+
 #include "cgi.h"
 
 CGI_BEGIN_DECLS

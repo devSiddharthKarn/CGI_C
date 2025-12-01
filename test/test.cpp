@@ -37,10 +37,12 @@ int main() {
 
         // CGI update cycle
         CGIUpdate(cgi);
-        CGIRefreshWindow(window);
+        CGIRefreshWindow(window,CGI_window_refresh_mode_rapid);
 
         // Clear
-        CGIClearBuffer(window, CGIMakeColor(220, 220, 220));
+        // CGIClearBuffer(window, CGIMakeColor(220, 220, 220));
+
+        CGIClearBufferRegion(window,0,0,500,100,CGIMakeColor(100,0,0));
 
         // Convert FPS to string
         char fpsText[64];
@@ -60,7 +62,8 @@ int main() {
         );
 
         // Push to screen
-        CGIRefreshBuffer(window);
+        CGIRefreshBufferRegion(window,0,0,500,100);
+        // CGIRefreshBuffer(window);
     }
 
     // Cleanup

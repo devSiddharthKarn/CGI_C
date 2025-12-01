@@ -85,6 +85,16 @@ CGIBool CGIShowWindow(CGIWindow *window);
 /// @return void
 void CGISetPixel(CGIWindow *window, int x_pos, int y_pos, CGIColor_t color);
 
+
+/// @brief Refresh a specific region of the window's buffer(no return for less overhead and fast blitting)
+/// @param window CGIWindow* pointer to the window whose buffer region is to be refreshed
+/// @param x x-position of the region to be refreshed
+/// @param y y-position of the region to be refreshed
+/// @param width width of the region to be refreshed
+/// @param height height of the region to be refreshed
+/// @return void
+void CGIRefreshBufferRegion(CGIWindow* window,int x,int y,int width,int height);
+
 /// @brief  Perform a query on the CGI or CGIWindow structure
 /// @param query name of the query to be performed
 /// @param acceptor whom to make it accept
@@ -111,7 +121,7 @@ CGIColor_t CGIMakeColor(unsigned char r, unsigned char g, unsigned char b);
 /// @brief  Refresh the specified window
 /// @param window Pointer to the CGIWindow instance to be refreshed
 /// @return CGI_true if successful, otherwise CGI_false
-CGIBool CGIRefreshWindow(CGIWindow *window);
+CGIBool CGIRefreshWindow(CGIWindow *window,CGIWindowRefreshMode window_refresh_mode);
 
 /// @brief Refresh the buffer of the specified window
 /// @param window Pointer to the CGIWindow instance whose buffer is to be refreshed
@@ -123,6 +133,17 @@ CGIBool CGIRefreshBuffer(CGIWindow *window);
 /// @param color The color to clear the buffer with
 /// @return CGI_true if successful, otherwise CGI_false
 CGIBool CGIClearBuffer(CGIWindow *window, CGIColor_t color);
+
+
+/// @brief Clear the specific buffer region of the specified window with a given color(has no return for less overhead and fast blitting)
+/// @param window CGIWindow* to the window whose buffer region is to be cleared
+/// @param x x-position of the region to be cleared
+/// @param y y-position of the region to be cleared
+/// @param width width of the region to be cleared
+/// @param height height of the region to be cleared
+/// @param color CGIColor_t color to clear the region with
+/// @return void
+void CGIClearBufferRegion(CGIWindow *window, int x, int y, int width, int height, CGIColor_t color);
 
 /// @brief  Perform a command on the CGI or CGIWindow structure
 /// @param command      The command to be performed

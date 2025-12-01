@@ -34,7 +34,7 @@ CGIBool getPixelState(char c, unsigned int x, unsigned int y)
 /// @param color The color to render the text in
 CGIBool CGIWriteText(CGIWindow *window, char *text, unsigned int x_pos, unsigned int y_pos,
                      unsigned int x_spacing, unsigned int y_spacing, unsigned int h_scale, unsigned int v_scale,
-                     unsigned int offset,CGIBool line_wrap, CGIColor_t color)
+                     unsigned int offset, CGIBool line_wrap, CGIColor_t color)
 {
     if (!window || !text)
     {
@@ -63,8 +63,8 @@ CGIBool CGIWriteText(CGIWindow *window, char *text, unsigned int x_pos, unsigned
             continue;
         }
 
-        if(line_wrap){
-
+        if (line_wrap)
+        {
             if (x + 8 * h_scale > CGIGetWindowBufferWidth(window))
             {
                 x = x_pos;
