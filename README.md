@@ -1,5 +1,12 @@
 # CGI for C Language
 
+
+
+Release Notes:
+1. Added CGI_window_refresh_mode_triggered enum for triggered refresh mode in CGIRefreshWindow function but that still is in development and hasn't been completed and hence it is not recommended for current use.Please use CGI_window_refresh_mode_rapid for now.
+
+2.  Added APIs for updating and clearing specific regions of the window. These functions allow for more efficient rendering by only updating or clearing the specified areas instead of the entire window.
+
 A lightweight, cross-platform graphics library for C that provides a simple API for creating windows, rendering graphics, and handling user input on both Windows and Linux.
 
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-blue)]()

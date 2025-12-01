@@ -37,7 +37,7 @@ int main() {
 
         // CGI update cycle
         CGIUpdate(cgi);
-        CGIRefreshWindow(window,CGI_window_refresh_mode_rapid);
+        CGIRefreshWindow(window,CGI_window_refresh_mode_triggered);
 
         // Clear
         // CGIClearBuffer(window, CGIMakeColor(220, 220, 220));
