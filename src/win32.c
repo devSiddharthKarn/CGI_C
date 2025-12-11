@@ -1757,3 +1757,50 @@ CGIBool CGISetWindowMaximizableLogic(CGIWindow *window, CGIBool logic)
 {
     return CGIPerformCommand(CGI_command_window_maximizable_logic, &logic, window);
 }
+
+/// @brief Get the Win32 HWND handle of the specified window
+/// @param window CGIWindow instance
+/// @return HWND handle of the window
+HWND CGIGetWindow_Win32_HWND(CGIWindow* window){
+    return window->windowState.hwnd;
+}
+
+/// @brief Get the Win32 HDC handle of the specified window
+/// @param window CGIWindow instance
+/// @return HDC handle of the window
+HDC CGIGetWindow_Win32_HDC(CGIWindow* window){
+    return window->windowState.hdc;
+}
+
+/// @brief Get the Win32 WNDCLASSA structure of the specified window
+/// @param window CGIWindow instance
+/// @return WNDCLASSA structure of the window
+WNDCLASSA CGIGetWindow_Win32_WNDCLASSA(CGIWindow* window){
+    return window->windowState.wc;
+}
+
+/// @brief Get the Win32 PAINTSTRUCT structure of the specified window
+/// @param window CGIWindow instance
+/// @return PAINTSTRUCT structure of the window
+PAINTSTRUCT CGIGetWindow_Win32_PaintStruct(CGIWindow* window){
+    return window->windowState.ps;
+}
+
+/// @brief Get the Win32 BITMAPINFO structure of the specified window
+/// @param window CGIWindow instance
+/// @return BITMAPINFO structure of the window
+BITMAPINFO CGIGetWindow_Win32_BITMAPINFO(CGIWindow* window){
+    return window->windowState.bmi;
+}
+
+/// @brief Get the Win32 MSG structure of the specified window
+/// @param window CGIWindow instance
+/// @return MSG structure of the window
+MSG CGIGetWindow_Win32_MSG(CGIWindow* window){
+    return window->windowState.msg;
+}
+
+
+
+
+

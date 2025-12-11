@@ -1757,3 +1757,45 @@ CGIBool CGISetWindowMaximizableLogic(CGIWindow *window, CGIBool logic)
 {
     return CGIPerformCommand(CGI_command_window_maximizable_logic, &logic, window);
 }
+
+/// @brief Gets the Xlib Display pointer of the CGI window
+/// @param window Pointer to the CGI window
+/// @return Display pointer
+Display* CGIGetWindow_Linux_Xlib_Display_pointer(CGIWindow* window){
+    return window->windowState.display;
+}
+
+/// @brief Gets the Xlib screen number of the CGI window
+/// @param window Pointer to the CGI window
+/// @return Screen number
+int CGIGetWindow_Linux_Xlib_screen(CGIWindow* window){
+    return window->windowState.screen;
+}
+
+/// @brief Gets the Xlib Window of the CGI window
+/// @param window Pointer to the CGI window
+/// @return Window
+Window CGIGetWindow_Linux_Xlib_window(CGIWindow* window){
+    return window->windowState.window;
+}
+
+/// @brief Gets the Xlib Colormap of the CGI window
+/// @param window Pointer to the CGI window
+/// @return Colormap
+Colormap CGIGetWindow_Linux_Xlib_colormap(CGIWindow* window){
+    return window->windowState.colormap;
+}
+
+/// @brief Gets the Xlib GC (Graphics Context) of the CGI window
+/// @param window Pointer to the CGI window
+/// @return GC (Graphics Context)
+GC CGIGetWindow_Linux_Xlib_GC(CGIWindow* window){
+    return window->windowState.gc;
+}
+
+/// @brief Gets the Xlib base color of the CGI window
+/// @param window Pointer to the CGI window
+/// @return XColor representing the base color
+XColor CGIGetWindow_Linux_Xlib_base_color(CGIWindow* window){
+    return window->windowState.base_color;
+}

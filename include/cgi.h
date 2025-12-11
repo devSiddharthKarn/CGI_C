@@ -85,7 +85,6 @@ CGIBool CGIShowWindow(CGIWindow *window);
 /// @return void
 void CGISetPixel(CGIWindow *window, int x_pos, int y_pos, CGIColor_t color);
 
-
 /// @brief Refresh a specific region of the window's buffer(no return for less overhead and fast blitting)
 /// @param window CGIWindow* pointer to the window whose buffer region is to be refreshed
 /// @param x x-position of the region to be refreshed
@@ -93,7 +92,7 @@ void CGISetPixel(CGIWindow *window, int x_pos, int y_pos, CGIColor_t color);
 /// @param width width of the region to be refreshed
 /// @param height height of the region to be refreshed
 /// @return void
-void CGIRefreshBufferRegion(CGIWindow* window,int x,int y,int width,int height);
+void CGIRefreshBufferRegion(CGIWindow *window, int x, int y, int width, int height);
 
 /// @brief  Perform a query on the CGI or CGIWindow structure
 /// @param query name of the query to be performed
@@ -121,7 +120,7 @@ CGIColor_t CGIMakeColor(unsigned char r, unsigned char g, unsigned char b);
 /// @brief  Refresh the specified window
 /// @param window Pointer to the CGIWindow instance to be refreshed
 /// @return CGI_true if successful, otherwise CGI_false
-CGIBool CGIRefreshWindow(CGIWindow *window,CGIWindowRefreshMode window_refresh_mode);
+CGIBool CGIRefreshWindow(CGIWindow *window, CGIWindowRefreshMode window_refresh_mode);
 
 /// @brief Refresh the buffer of the specified window
 /// @param window Pointer to the CGIWindow instance whose buffer is to be refreshed
@@ -133,7 +132,6 @@ CGIBool CGIRefreshBuffer(CGIWindow *window);
 /// @param color The color to clear the buffer with
 /// @return CGI_true if successful, otherwise CGI_false
 CGIBool CGIClearBuffer(CGIWindow *window, CGIColor_t color);
-
 
 /// @brief Clear the specific buffer region of the specified window with a given color(has no return for less overhead and fast blitting)
 /// @param window CGIWindow* to the window whose buffer region is to be cleared
@@ -287,5 +285,77 @@ CGIBool CGISetWindowMinimizableLogic(CGIWindow *window, CGIBool logic);
 /// @param logic The new maximizable logic for the window
 /// @return CGI_true if the maximizable logic was successfully set, otherwise CGI_false
 CGIBool CGISetWindowMaximizableLogic(CGIWindow *window, CGIBool logic);
+
+#ifdef CGI_WINDOWS_IMPLEMENTATION_ACTIVE
+
+#include "Windows.h"
+
+/// @brief Get the Win32 HWND handle of the specified window
+/// @param window CGIWindow instance
+/// @return HWND handle of the window
+HWND CGIGetWindow_Win32_HWND(CGIWindow *window);
+
+/// @brief Get the Win32 HDC handle of the specified window
+/// @param window CGIWindow instance
+/// @return HDC handle of the window
+HDC CGIGetWindow_Win32_HDC(CGIWindow *window);
+
+/// @brief Get the Win32 WNDCLASSA structure of the specified window
+/// @param window CGIWindow instance
+/// @return WNDCLASSA structure of the window
+WNDCLASSA CGIGetWindow_Win32_WNDCLASSA(CGIWindow *window);
+
+/// @brief Get the Win32 PAINTSTRUCT structure of the specified window
+/// @param window CGIWindow instance
+/// @return PAINTSTRUCT structure of the window
+PAINTSTRUCT CGIGetWindow_Win32_PaintStruct(CGIWindow *window);
+
+/// @brief Get the Win32 BITMAPINFO structure of the specified window
+/// @param window CGIWindow instance
+/// @return BITMAPINFO structure of the window
+BITMAPINFO CGIGetWindow_Win32_BITMAPINFO(CGIWindow *window);
+
+/// @brief Get the Win32 MSG structure of the specified window
+/// @param window CGIWindow instance
+/// @return MSG structure of the window
+MSG CGIGetWindow_Win32_MSG(CGIWindow *window);
+
+#endif
+
+#ifdef CGI_LINUX_IMPLEMENTATION_ACTIVE
+
+#include "X11/Xlib.h"
+
+/// @brief Get the Xlib Display pointer of the specified window
+/// @param window CGIWindow instance
+/// @return Display pointer of the window
+Display *CGIGetWindow_Linux_Xlib_Display_pointer(CGIWindow *window);
+
+/// @brief Get the Xlib screen number of the specified window
+/// @param window CGIWindow instance
+/// @return Screen number of the window
+int CGIGetWindow_Linux_Xlib_screen(CGIWindow *window);
+
+/// @brief Get the Xlib Window of the specified window
+/// @param window CGIWindow instance
+/// @return Window of the window
+Window CGIGetWindow_Linux_Xlib_window(CGIWindow *window);
+
+/// @brief Get the Xlib Colormap of the specified window
+/// @param window CGIWindow instance
+/// @return Colormap of the window
+Colormap CGIGetWindow_Linux_Xlib_colormap(CGIWindow *window);
+
+/// @brief Get the Xlib GC (Graphics Context) of the specified window
+/// @param window CGIWindow instance
+/// @return GC (Graphics Context) of the window
+GC CGIGetWindow_Linux_Xlib_GC(CGIWindow *window);
+
+/// @brief Get the Xlib base color of the specified window
+/// @param window CGIWindow instance
+/// @return XColor base color of the window
+XColor CGIGetWindow_Linux_Xlib_base_color(CGIWindow *window);
+
+#endif
 
 CGI_END_DECLS;
