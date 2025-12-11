@@ -7,6 +7,8 @@ Release Notes:
 
 2.  Added APIs for updating and clearing specific regions of the window. These functions allow for more efficient rendering by only updating or clearing the specified areas instead of the entire window.
 
+3.Added more getters and setters for querying platform-specific window properties on windows and linux based distros.
+
 A lightweight, cross-platform graphics library for C that provides a simple API for creating windows, rendering graphics, and handling user input on both Windows and Linux.
 
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-blue)]()
