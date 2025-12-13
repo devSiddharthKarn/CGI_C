@@ -15,7 +15,7 @@ int main(){
             CGISetPixel(window,p.x,p.y,CGIMakeColor(1,233,1));
         }
 
-        CGIRefreshWindow(window);
+        CGIRefreshWindow(window,CGI_window_refresh_mode_rapid);
         CGIRefreshBuffer(window);
         CGIUpdate(cgi);
     }
