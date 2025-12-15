@@ -1,201 +1,173 @@
 /*
- * CGI Library - Dynamic Particle System Demo
- * Demonstrates buffer region updates and FPS display
+ * CGI Input Testing Program
+ * Tests all keyboard and mouse inputs
  */
 
 #include "../include/cgi.h"
-// #include "cgi_font_raster.h"
-#include "../include/cgi_font.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
-#include <time.h>
 
-
-#define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 600
-#define PARTICLE_COUNT 150
-#define PARTICLE_SIZE 3
-#define TRAIL_LENGTH 8
-
-typedef struct {
-    float x, y;
-    float vx, vy;
-    CGIColor_t color;
-    float trail_x[TRAIL_LENGTH];
-    float trail_y[TRAIL_LENGTH];
-    int trail_index;
-} Particle;
-
-void init_particle(Particle *p, int width, int height) {
-    p->x = rand() % width;
-    p->y = rand() % height;
-    
-    float angle = (rand() % 360) * 3.14159f / 180.0f;
-    float speed = 1.5f + (rand() % 100) / 50.0f;
-    
-    p->vx = cos(angle) * speed;
-    p->vy = sin(angle) * speed;
-    
-    unsigned char r = 100 + rand() % 156;
-    unsigned char g = 100 + rand() % 156;
-    unsigned char b = 100 + rand() % 156;
-    p->color = CGIMakeColor(r, g, b);
-    
-    for (int i = 0; i < TRAIL_LENGTH; i++) {
-        p->trail_x[i] = p->x;
-        p->trail_y[i] = p->y;
-    }
-    p->trail_index = 0;
-}
-
-void update_particle(Particle *p, int width, int height) {
-    // Store old position in trail
-    p->trail_x[p->trail_index] = p->x;
-    p->trail_y[p->trail_index] = p->y;
-    p->trail_index = (p->trail_index + 1) % TRAIL_LENGTH;
-    
-    // Update position
-    p->x += p->vx;
-    p->y += p->vy;
-    
-    // Bounce off edges with slight randomness
-    if (p->x < 0 || p->x >= width) {
-        p->vx = -p->vx * (0.95f + (rand() % 10) / 100.0f);
-        p->x = (p->x < 0) ? 0 : width - 1;
-    }
-    if (p->y < 0 || p->y >= height) {
-        p->vy = -p->vy * (0.95f + (rand() % 10) / 100.0f);
-        p->y = (p->y < 0) ? 0 : height - 1;
+// Helper function to print key states
+void PrintKeyState(const char* keyName, CGIWindow* window, CGIKeyCode keyCode) {
+    if (CGIIsWindowKeyDown(window, keyCode)) {
+        printf("[DOWN] %s\n", keyName);
     }
 }
 
-void draw_particle(CGIWindow *window, Particle *p) {
-    // Draw trail with fading effect
-    for (int i = 0; i < TRAIL_LENGTH; i++) {
-        int age = (p->trail_index - i + TRAIL_LENGTH) % TRAIL_LENGTH;
-        float alpha = (float)age / TRAIL_LENGTH;
-        
-        int tx = (int)p->trail_x[i];
-        int ty = (int)p->trail_y[i];
-        
-        // Extract RGB and apply alpha
-        unsigned char r = ((p->color.r >> 16) & 0xFF) * alpha;
-        unsigned char g = ((p->color.g >> 8) & 0xFF) * alpha;
-        unsigned char b = (p->color.b & 0xFF) * alpha;
-        
-        CGIColor_t trail_color = CGIMakeColor(r, g, b);
-        
-        // Draw smaller trail pixels
-        for (int dy = 0; dy < 2; dy++) {
-            for (int dx = 0; dx < 2; dx++) {
-                CGISetPixel(window, tx + dx, ty + dy, trail_color);
-            }
-        }
-    }
-    
-    // Draw main particle
-    int px = (int)p->x;
-    int py = (int)p->y;
-    
-    for (int dy = 0; dy < PARTICLE_SIZE; dy++) {
-        for (int dx = 0; dx < PARTICLE_SIZE; dx++) {
-            CGISetPixel(window, px + dx, py + dy, p->color);
-        }
+void PrintCursorButtonState(const char* buttonName, CGIWindow* window, CGIKeyCode buttonCode) {
+    if (CGIIsWindowCursorKeyDown(window, buttonCode)) {
+        printf("[MOUSE DOWN] %s\n", buttonName);
     }
 }
 
 int main() {
-    srand(time(NULL));
-    
-    CGI *cgi = CGIStart();
-    if (!cgi) {
-        printf("Failed to initialize CGI\n");
-        return 1;
-    }
-    
-    CGIWindow *window = CGICreateWindow(
-        "ParticleDemo",
-        "CGI Particle System - Dynamic Buffer Updates",
+    // Create window
+    CGIWindow* window = CGICreateWindow(
+        "InputTestClass",
+        "CGI Input Test - Press keys and move mouse",
         100, 100,
-        WINDOW_WIDTH, WINDOW_HEIGHT,
-        CGIMakeColor(10, 10, 20)
+        800, 600,
+        CGIMakeColor(30, 30, 40)
     );
-    
+
     if (!window) {
-        printf("Failed to create window\n");
-        CGIEnd(cgi);
-        return 1;
+        printf("Failed to create window!\n");
+        return -1;
     }
-    
+
     CGIShowWindow(window);
-    
-    // Initialize particles
-    Particle particles[PARTICLE_COUNT];
-    for (int i = 0; i < PARTICLE_COUNT; i++) {
-        init_particle(&particles[i], WINDOW_WIDTH, WINDOW_HEIGHT);
-    }
-    
-    // FPS tracking
-    clock_t last_time = clock();
-    int frame_count = 0;
-    int fps = 0;
-    char fps_text[32];
-    
-    CGIColor_t bg_color = CGIMakeColor(10, 10, 20);
-    CGIColor_t fps_color = CGIMakeColor(0, 255, 100);
-    
-    printf("Particle System Running...\n");
-    printf("Controls: ESC to exit\n");
-    
+
+    printf("=== CGI Input Test Started ===\n");
+    printf("Press ESC to exit\n");
+    printf("Try pressing multiple keys simultaneously\n\n");
+
+    int frameCount = 0;
+
     while (CGIIsWindowOpen(window)) {
-        CGIUpdate(cgi);
-        CGIRefreshWindow(window,CGI_window_refresh_mode_rapid);
-        // Check for ESC key
-        if (CGIIsKeyPressed(window, CGI_input_key_escape)) {
+        // Refresh window state
+        CGIRefreshWindow(window, CGI_window_refresh_mode_rapid);
+
+        // Check for ESC to exit
+        if (CGIIsWindowKeyDown(window, CGI_KEYCODE_ESCAPE)) {
+            printf("\nESC pressed - Exiting...\n");
             break;
         }
-        
-        // Clear the entire buffer
-        CGIClearBuffer(window, bg_color);
-        
-        // Update and draw all particles
-        for (int i = 0; i < PARTICLE_COUNT; i++) {
-            update_particle(&particles[i], WINDOW_WIDTH, WINDOW_HEIGHT);
-            draw_particle(window, &particles[i]);
+
+        // Only print status every 10 frames to avoid spam
+        if (frameCount % 10 == 0) {
+            // Clear console (Windows)
+            system("clear");
+            
+            printf("=== CGI Input Test ===\n");
+            printf("Frame: %d\n\n", frameCount);
+
+            // Cursor position
+            CGIPoint cursor = CGIGetWindowCursorPosition(window);
+            printf("Cursor Position: (%d, %d)\n\n", cursor.x, cursor.y);
+
+            // Window state
+            printf("Window Focused: %s\n", CGIIsWindowFocused(window) ? "YES" : "NO");
+            printf("Window Resized: %s\n\n", CGIIsWindowResized(window) ? "YES" : "NO");
+
+            // Scroll state
+            if (CGIIsWindowScrolledX(window)) {
+                printf("Scroll X: %.2f\n", CGIGetWindowScrollDeltaX(window));
+            }
+            if (CGIIsWindowScrolledY(window)) {
+                printf("Scroll Y: %.2f\n", CGIGetWindowScrollDeltaY(window));
+            }
+
+            // Mouse buttons
+            printf("\n--- Mouse Buttons ---\n");
+            PrintCursorButtonState("Left Mouse", window, CGI_KEYCODE_MOUSE_L);
+            PrintCursorButtonState("Right Mouse", window, CGI_KEYCODE_MOUSE_R);
+
+            // Alphabet keys
+            printf("\n--- Alphabet Keys ---\n");
+            PrintKeyState("A", window, CGI_KEYCODE_A);
+            PrintKeyState("B", window, CGI_KEYCODE_B);
+            PrintKeyState("C", window, CGI_KEYCODE_C);
+            PrintKeyState("D", window, CGI_KEYCODE_D);
+            PrintKeyState("E", window, CGI_KEYCODE_E);
+            PrintKeyState("F", window, CGI_KEYCODE_F);
+            PrintKeyState("G", window, CGI_KEYCODE_G);
+            PrintKeyState("H", window, CGI_KEYCODE_H);
+            PrintKeyState("I", window, CGI_KEYCODE_I);
+            PrintKeyState("J", window, CGI_KEYCODE_J);
+            PrintKeyState("K", window, CGI_KEYCODE_K);
+            PrintKeyState("L", window, CGI_KEYCODE_L);
+            PrintKeyState("M", window, CGI_KEYCODE_M);
+            PrintKeyState("N", window, CGI_KEYCODE_N);
+            PrintKeyState("O", window, CGI_KEYCODE_O);
+            PrintKeyState("P", window, CGI_KEYCODE_P);
+            PrintKeyState("Q", window, CGI_KEYCODE_Q);
+            PrintKeyState("R", window, CGI_KEYCODE_R);
+            PrintKeyState("S", window, CGI_KEYCODE_S);
+            PrintKeyState("T", window, CGI_KEYCODE_T);
+            PrintKeyState("U", window, CGI_KEYCODE_U);
+            PrintKeyState("V", window, CGI_KEYCODE_V);
+            PrintKeyState("W", window, CGI_KEYCODE_W);
+            PrintKeyState("X", window, CGI_KEYCODE_X);
+            PrintKeyState("Y", window, CGI_KEYCODE_Y);
+            PrintKeyState("Z", window, CGI_KEYCODE_Z);
+
+            // Number keys
+            printf("\n--- Number Keys ---\n");
+            PrintKeyState("0", window, CGI_KEYCODE_0);
+            PrintKeyState("1", window, CGI_KEYCODE_1);
+            PrintKeyState("2", window, CGI_KEYCODE_2);
+            PrintKeyState("3", window, CGI_KEYCODE_3);
+            PrintKeyState("4", window, CGI_KEYCODE_4);
+            PrintKeyState("5", window, CGI_KEYCODE_5);
+            PrintKeyState("6", window, CGI_KEYCODE_6);
+            PrintKeyState("7", window, CGI_KEYCODE_7);
+            PrintKeyState("8", window, CGI_KEYCODE_8);
+            PrintKeyState("9", window, CGI_KEYCODE_9);
+
+            // Arrow keys
+            printf("\n--- Arrow Keys ---\n");
+            PrintKeyState("UP", window, CGI_KEYCODE_UP);
+            PrintKeyState("DOWN", window, CGI_KEYCODE_DOWN);
+            PrintKeyState("LEFT", window, CGI_KEYCODE_LEFT);
+            PrintKeyState("RIGHT", window, CGI_KEYCODE_RIGHT);
+
+            // Special keys
+            printf("\n--- Special Keys ---\n");
+            PrintKeyState("SPACE", window, CGI_KEYCODE_SPACE);
+            PrintKeyState("ENTER", window, CGI_KEYCODE_ENTER);
+            PrintKeyState("BACKSPACE", window, CGI_KEYCODE_BACKSPACE);
+            PrintKeyState("SHIFT", window, CGI_KEYCODE_SHIFT);
+            PrintKeyState("CTRL", window, CGI_KEYCODE_CTRL);
+            PrintKeyState("ALT", window, CGI_KEYCODE_ALT);
+
+            // Function keys
+            printf("\n--- Function Keys ---\n");
+            PrintKeyState("F1", window, CGI_KEYCODE_F1);
+            PrintKeyState("F2", window, CGI_KEYCODE_F2);
+            PrintKeyState("F3", window, CGI_KEYCODE_F3);
+            PrintKeyState("F4", window, CGI_KEYCODE_F4);
+            PrintKeyState("F5", window, CGI_KEYCODE_F5);
+            PrintKeyState("F6", window, CGI_KEYCODE_F6);
+            PrintKeyState("F7", window, CGI_KEYCODE_F7);
+            PrintKeyState("F8", window, CGI_KEYCODE_F8);
+            PrintKeyState("F9", window, CGI_KEYCODE_F9);
+            PrintKeyState("F10", window, CGI_KEYCODE_F10);
+            PrintKeyState("F11", window, CGI_KEYCODE_F11);
+            PrintKeyState("F12", window, CGI_KEYCODE_F12);
+
+            printf("\n\nPress ESC to exit\n");
         }
-        
-        // Calculate FPS
-        frame_count++;
-        clock_t current_time = clock();
-        double elapsed = (double)(current_time - last_time) / CLOCKS_PER_SEC;
-        
-        if (elapsed >= 0.5) {
-            fps = (int)(frame_count / elapsed);
-            frame_count = 0;
-            last_time = current_time;
-        }
-        
-        // Draw FPS counter using region update
-        snprintf(fps_text, sizeof(fps_text), "FPS: %d", fps);
-        
-        // Clear FPS region
-        CGIClearBufferRegion(window, 5, 5, 120, 25, CGIMakeColor(0, 0, 0));
-        
-        // Write FPS text
-        CGIWriteText(window, fps_text, 10, 10, 1, 1, 2, 2, 0, CGI_false, fps_color);
-        
-        // Refresh only the FPS region (efficient!)
-        CGIRefreshBufferRegion(window, 5, 5, 120, 25);
-        
-        // Refresh the main particle area
-        CGIRefreshBufferRegion(window, 0, 30, WINDOW_WIDTH, WINDOW_HEIGHT - 30);
+
+        frameCount++;
+
+        // Small delay to prevent CPU spinning
+        // You might want to use a proper frame timing mechanism
     }
-    
-    printf("Shutting down...\n");
+
+    // Cleanup
     CGICloseWindow(window);
     CGIWindowCleanup(window);
-    CGIEnd(cgi);
-    
+
+    printf("\n=== Test Completed ===\n");
     return 0;
 }

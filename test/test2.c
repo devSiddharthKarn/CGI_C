@@ -1,25 +1,71 @@
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+
 #include "../include/cgi.h"
+#include "stb_image.h"
+#include "stb_image_write.h"
+
+void DrawRect(CGIWindow* window, unsigned int x_pos, unsigned int y_pos, unsigned int width, unsigned int height, CGIColor_t color){
+    CGIClearBufferRegion(window,x_pos,y_pos,width,height,color);
+    return;
+}
+
 
 int main(){
 
-    CGI* cgi = CGIStart();
-
-    CGIWindow * window = CGICreateWindow("mywindow","window",50,100,300,400,CGIMakeColor(100,200,22));
+    CGIWindow* window = CGICreateWindow("TestClass","CGI Window Test",100,100,800,600,CGIMakeColor(20,20,30));
 
     CGIShowWindow(window);
 
-    while(CGIIsWindowOpen(window)){
-        if(CGIIsKeyPressed(window,CGI_input_key_shift) && CGIIsMouseButtonPressed(cgi,CGI_input_key_mouse_l)){
-            CGIPoint p = CGIGetWindowCursorPosition(window);
+    CGIPoint pos={
+        .x=0,
+        .y=0
+    };
+    
+    CGIWindowSurface surface;
 
-            CGISetPixel(window,p.x,p.y,CGIMakeColor(1,233,1));
+    while(CGIIsWindowOpen(window)){
+        CGIRefreshWindow(window,CGI_window_refresh_mode_rapid);
+
+        DrawRect(window,100,100,200,150,CGIMakeColor(200,50,50));
+
+        if(CGIIsWindowKeyDown(window,CGI_KEYCODE_ESCAPE)){
+            break;
         }
 
-        CGIRefreshWindow(window,CGI_window_refresh_mode_rapid);
-        CGIRefreshBuffer(window);
-        CGIUpdate(cgi);
-    }
+        if(CGIIsWindowKeyDown(window,CGI_KEYCODE_ENTER)){
+            printf("Window Surface - Width: %u, Height: %u\n",surface.width,surface.height);
 
+            surface = CGIGetWindowSurface(window);
+
+            stbi_write_png("window_surface.png",surface.width,surface.height,surface.channels,surface.buffer,surface.width*surface.channels);
+            printf("Saved window surface to window_surface.png\n");
+
+
+        }
+        DrawRect(window,pos.x,pos.y,50,50,CGIMakeColor(0,255,0));
+
+        if(CGIIsWindowKeyDown(window,CGI_KEYCODE_W)){
+            pos.y-=5;
+        }
+
+        if(CGIIsWindowKeyDown(window,CGI_KEYCODE_S)){
+            pos.y+=5;
+        }
+
+        if(CGIIsWindowKeyDown(window,CGI_KEYCODE_A)){
+            pos.x-=5;
+        }
+        
+        if(CGIIsWindowKeyDown(window,CGI_KEYCODE_D)){
+            pos.x+=5;
+        }
+
+        CGIRefreshBuffer(window);
+    }
+    
+    CGIFreeWindowSurface(surface);
     CGICloseWindow(window);
-    CGIEnd(cgi);
+    CGIWindowCleanup(window);
+
 }

@@ -34,27 +34,14 @@
 #define CGI_END_DECLS
 #endif
 
-/// @brief Opaque structure representing the CGI instance
-typedef struct CGI CGI;
+// /// @brief Opaque structure representing the CGI instance
+// typedef struct CGI CGI;
 
+CGI_BEGIN_DECLS
 /// @brief Opaque structure representing a CGI window
 typedef struct CGIWindow CGIWindow;
 
-CGI_BEGIN_DECLS
 
-/// @brief Start and initialize a CGI instance
-/// @return Pointer to the initialized CGI instance, or NULL on failure
-CGI *CGIStart();
-
-/// @brief Update the CGI instance to refresh states
-/// @param cgi Pointer to the CGI instance to be updated
-/// @return CGI_true if successful, otherwise CGI_false
-CGIBool CGIUpdate(CGI *cgi);
-
-/// @brief End the CGI instance and free resources
-/// @param cgi Pointer to the CGI instance to be ended
-/// @return CGI_true if successful, otherwise CGI_false
-CGIBool CGIEnd(CGI *cgi);
 
 /// @brief Create a new CGI window
 /// @param classname The class name for the window
@@ -66,6 +53,20 @@ CGIBool CGIEnd(CGI *cgi);
 /// @param color The base color of the window
 /// @return Pointer to the created CGIWindow instance, or NULL on failure
 CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_pos, unsigned int y_pos, unsigned int width, unsigned int height, CGIColor_t color);
+
+/// @brief Get the current event image from the window
+/// @param window CGIWindow* window
+/// @return CGIEventImage
+CGIEventImage CGIGetWindowEventImage(CGIWindow* window);
+
+/// @brief Get the current surface of the window
+/// @param window CGIWindow* window
+/// @return CGIWindowSurface(the current window surface as in an allocated memory buffer that needs to be freed after use)
+CGIWindowSurface CGIGetWindowSurface(CGIWindow* window);
+
+/// @brief Free the resources associated with a CGIWindowSurface that was previously allocated
+/// @param surface CGIWindowSurface surface to be freed
+void CGIFreeWindowSurface(CGIWindowSurface surface);
 
 /// @brief Clean up and destroy a CGI window
 /// @param window Pointer to the CGIWindow instance to be cleaned up
@@ -98,7 +99,7 @@ void CGIRefreshBufferRegion(CGIWindow *window, int x, int y, int width, int heig
 /// @param query name of the query to be performed
 /// @param acceptor whom to make it accept
 /// @return const void * pointer to the result of the query (need to be casted to appropriate type)
-const void *CGIPerformQuery(CGIQuery query, const void *acceptor);
+// const void *CGIPerformQuery(CGIQuery query, const void *acceptor);
 
 /// @brief check if the window is open
 /// @param window CGIWindow pointer to the window to be checked
@@ -148,13 +149,19 @@ void CGIClearBufferRegion(CGIWindow *window, int x, int y, int width, int height
 /// @param args         Arguments for the command
 /// @param acceptor     The entity to accept the command
 /// @return CGI_true if successful, otherwise CGI_false
-CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acceptor);
+// CGIBool CGIPerformCommand(CGICommand command, const void *args, const void *acceptor);
 
 /// @brief Check if a specific key is pressed in the given window
 /// @param window Pointer to the CGIWindow instance
 /// @param key The key to check
 /// @return CGI_true if the key is pressed, otherwise CGI_false
-CGIBool CGIIsKeyPressed(CGIWindow *window, CGIInputKey key);
+// CGIBool CGIIsKeyDown(CGIKeyCode key);
+
+// CGIBool CGIIsKeyUp(CGIKeyCode key);
+
+CGIBool CGIIsWindowKeyDown(CGIWindow* window, CGIKeyCode key);
+CGIBool CGIIsWindowKeyUp(CGIWindow* window, CGIKeyCode key);
+
 
 /// @brief Check if the specified window is focused
 /// @param window Pointer to the CGIWindow instance
@@ -230,7 +237,14 @@ CGIBool CGIIsWindowScrolledY(CGIWindow *window);
 /// @param cgi Pointer to the CGI instance
 /// @param key The mouse button key to check
 /// @return CGI_true if the specified mouse button is pressed, otherwise CGI_false
-CGIBool CGIIsMouseButtonPressed(CGI *cgi, CGIInputKey key);
+// CGIBool CGIIsMouseButtonPressed(CGIWindow* window,CGIInputKey key);
+
+// CGIBool CGIIsCursorKeyDown(CGIKeyCode key);
+
+// CGIBool CGIIsCursorKeyUp(CGIKeyCode key);
+
+CGIBool CGIIsWindowCursorKeyDown(CGIWindow* window,CGIKeyCode key);
+CGIBool CGIIsWindowCursorKeyUp(CGIWindow* window,CGIKeyCode key);
 
 /// @brief  Set the title of the specified window
 /// @param window Pointer to the CGIWindow instance
