@@ -59,10 +59,18 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
 /// @return CGIEventImage
 CGIEventImage CGIGetWindowEventImage(CGIWindow* window);
 
+
+// /// @brief Log the event image for debugging purposes
+// /// @param eventImage CGIEventImage* event image to be logged
+// void CGILogEventImage(CGIEventImage* eventImage);
+
 /// @brief Get the current surface of the window
 /// @param window CGIWindow* window
 /// @return CGIWindowSurface(the current window surface as in an allocated memory buffer that needs to be freed after use)
 CGIWindowSurface CGIGetWindowSurface(CGIWindow* window);
+
+
+CGIWindowSurface CGIGetWindowSurfaceRegion(CGIWindow* window,int x_pos,int y_pos,int width,int height);
 
 /// @brief Free the resources associated with a CGIWindowSurface that was previously allocated
 /// @param surface CGIWindowSurface surface to be freed

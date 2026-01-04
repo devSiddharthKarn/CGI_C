@@ -267,9 +267,8 @@ struct CGIWindow
     COLORREF win_base_color;
     CGIColor_t base_color;
     CGIEventImage event;
-    
+
     CGIBool open;
-    
 };
 
 /// @brief Cleanup and free resources associated with a CGIWindow
@@ -304,8 +303,6 @@ CGIBool CGIWindowCleanup(CGIWindow *window)
         UnregisterClassA(window->windowState.wc.lpszClassName, window->windowState.wc.hInstance);
         window->windowState.hwnd = NULL;
     }
-
-    
 
     if (window->window_name)
     {
@@ -703,18 +700,17 @@ CGIWindow *CGICreateWindow(char *classname, char *window_name, unsigned int x_po
     return window;
 }
 
-
-CGIEventImage CGIGetWindowEventImage(CGIWindow* window){
+CGIEventImage CGIGetWindowEventImage(CGIWindow *window)
+{
     return window->event;
 }
 
-
-CGIWindowSurface CGIGetWindowSurface(CGIWindow* window){
+CGIWindowSurface CGIGetWindowSurface(CGIWindow *window)
+{
     CGIWindowSurface surface;
 
-    surface.buffer=(void *)malloc(sizeof(unsigned char)*window->windowState.buffer_width*window->windowState.buffer_height*3);
+    surface.buffer = (void *)malloc(sizeof(unsigned char) * window->windowState.buffer_width * window->windowState.buffer_height * 3);
 
-    
     COLORREF *window_main_buffer = window->windowState.buffer;
 
     unsigned char *buf = (unsigned char *)surface.buffer;
@@ -741,26 +737,89 @@ CGIWindowSurface CGIGetWindowSurface(CGIWindow* window){
         }
     }
 
-    
-    surface.height=window->windowState.buffer_height;
+    surface.height = window->windowState.buffer_height;
     surface.width = window->windowState.buffer_width;
-    surface.channels=3;
+    surface.channels = 3;
+
+    return surface;
+}
+CGIWindowSurface CGIGetWindowSurfaceRegion(
+    CGIWindow *window,
+    int x_pos,
+    int y_pos,
+    int width,
+    int height)
+{
+    CGIWindowSurface surface = {0};
+
+    COLORREF *window_main_buffer = window->windowState.buffer;
+    int winW = window->windowState.buffer_width;
+    int winH = window->windowState.buffer_height;
+
+    int win_x0 = x_pos < 0 ? 0 : x_pos;
+    int win_y0 = y_pos < 0 ? 0 : y_pos;
+
+    int win_x1 = x_pos + width > winW ? winW : x_pos + width;
+    int win_y1 = y_pos + height > winH ? winH : y_pos + height;
+
+    /* If region is fully outside */
+    if (win_x1 <= win_x0 || win_y1 <= win_y0)
+    {
+        return surface; // empty surface
+    }
+
+    int copy_width = win_x1 - win_x0;
+    int copy_height = win_y1 - win_y0;
+
+    int channels = 3;
+    int rowSize = (copy_width * channels + 3) & ~3; // 4-byte aligned
+
+    surface.buffer = malloc(rowSize * copy_height);
+    if (!surface.buffer)
+    {
+        return surface;
+    }
+
+    unsigned char *buf = (unsigned char *)surface.buffer;
+
+    for (int y = win_y0; y < win_y1; y++)
+    {
+        int sy = y - win_y0;
+        unsigned char *row = buf + sy * rowSize;
+
+        for (int x = win_x0; x < win_x1; x++)
+        {
+            int sx = x - win_x0;
+
+            int srcPos = y * winW + x;
+            int dstPos = sx * channels;
+
+            COLORREF c = window_main_buffer[srcPos];
+
+            row[dstPos + 0] = GetRValue(c);
+            row[dstPos + 1] = GetGValue(c);
+            row[dstPos + 2] = GetBValue(c);
+        }
+    }
+
+    surface.width = copy_width;
+    surface.height = copy_height;
+    surface.channels = channels;
 
     return surface;
 }
 
-
-void CGIFreeWindowSurface(CGIWindowSurface surface){
-    if(surface.buffer){
+void CGIFreeWindowSurface(CGIWindowSurface surface)
+{
+    if (surface.buffer)
+    {
         free((void *)surface.buffer);
     }
-    surface.buffer=NULL;
-    surface.height=0;
-    surface.width=0;
-    surface.channels=0;
+    surface.buffer = NULL;
+    surface.height = 0;
+    surface.width = 0;
+    surface.channels = 0;
 }
-
-
 
 /// @brief Check if the window is currently focused
 /// @param window Pointer to the CGIWindow structure
@@ -874,17 +933,17 @@ CGIBool CGIIsWindowKeyDown(CGIWindow *window, CGIKeyCode key)
 //     window->scroll_delta_y = 0;
 // }
 
-void ScanCursor(CGIWindow* window,CGICursorEvent *cursorEvent)
+void ScanCursor(CGIWindow *window, CGICursorEvent *cursorEvent)
 {
     POINT point;
     GetCursorPos(&point);
     cursorEvent->system_x = point.x;
     cursorEvent->system_y = point.y;
 
-    ScreenToClient(window->windowState.hwnd,&point);
-    
-    cursorEvent->win_x=point.x;
-    cursorEvent->win_y=point.y;
+    ScreenToClient(window->windowState.hwnd, &point);
+
+    cursorEvent->win_x = point.x;
+    cursorEvent->win_y = point.y;
 
     SHORT left_button_state = GetAsyncKeyState(VK_LBUTTON);
     SHORT right_button_state = GetAsyncKeyState(VK_RBUTTON);
@@ -935,7 +994,7 @@ void ScanAllKeyBoardKeys(CGIKeyboardEvent *state)
 void getCurrentEventImage(CGIWindow *window, CGIEventImage *eventImage)
 {
     ScanAllKeyBoardKeys(&eventImage->keyboardEvent);
-    ScanCursor(window,&eventImage->cursorEvent);
+    ScanCursor(window, &eventImage->cursorEvent);
 
     eventImage->windowEvent.is_focused = CGI_false;
     eventImage->windowEvent.is_resized = CGI_false;
@@ -1093,8 +1152,7 @@ CGIBool CGIRefreshWindow(CGIWindow *window, CGIWindowRefreshMode window_refresh_
         }
         return CGI_true;
     }
-
-    if (window_refresh_mode == CGI_window_refresh_mode_triggered)
+    else if (window_refresh_mode == CGI_window_refresh_mode_triggered)
     {
         while (GetMessageA(&window->windowState.msg, NULL, 0, 0))
         {
@@ -1112,6 +1170,29 @@ CGIBool CGIRefreshWindow(CGIWindow *window, CGIWindowRefreshMode window_refresh_
     return CGI_false;
     // Update window states
 }
+
+// #include <stdio.h>
+// void CGILogEventImage(CGIEventImage* eventImage)
+// {
+
+//     printf("Keyboard Down Keys: 0x%08X\n", eventImage->keyboardEvent.down_keys);
+//     printf("Keyboard Up Keys: 0x%08X\n", eventImage->keyboardEvent.up_keys);
+//     printf("Cursor Win Position: (%d, %d)\n", eventImage->cursorEvent.win_x, eventImage->cursorEvent.win_y);
+//     printf("Cursor System Position: (%d, %d)\n", eventImage->cursorEvent.system_x, eventImage->cursorEvent.system_y);
+
+//     printf("Cursor Down Buttons: 0x%08X\n", eventImage->cursorEvent.down_buttons);
+//     printf("Cursor Up Buttons: 0x%08X\n", eventImage->cursorEvent.up_buttons);
+
+//     printf("Window Focused: %s\n", eventImage->windowEvent.is_focused ? "True" : "False");
+//     printf("Window Resized: %s\n", eventImage->windowEvent.is_resized ? "True" : "False");
+//     printf("Window Moved: %s\n", eventImage->windowEvent.is_moved ? "True" : "False");
+//     printf("is_scrolled_x: %s\n", eventImage->windowEvent.is_scrolled_x ? "True" : "False");
+//     printf("is_scrolled_y: %s\n", eventImage->windowEvent.is_scrolled_y ? "True" : "False");
+//     printf("Window Scrolled X: %s, Delta: %.2f\n", eventImage->windowEvent.is_scrolled_x ? "True" : "False", eventImage->windowEvent.scroll_delta_x);
+//     printf("Window Scrolled Y: %s, Delta: %.2f\n", eventImage->windowEvent.is_scrolled_y ? "True" : "False", eventImage->windowEvent.scroll_delta_y);
+//     // printf("\n");
+
+// }
 
 /// @brief Set a pixel at the specified position with the given color
 /// @param window Pointer to the CGIWindow structure

@@ -868,6 +868,69 @@ CGIWindowSurface CGIGetWindowSurface(CGIWindow *window)
     return surface;
 }
 
+CGIWindowSurface CGIGetWindowSurfaceRegion(
+    CGIWindow *window,
+    int x_pos,
+    int y_pos,
+    int width,
+    int height)
+{
+    CGIWindowSurface surface = {0};
+
+    int winW = window->buffer_width;
+    int winH = window->buffer_height;
+
+    int win_x0 = x_pos < 0 ? 0 : x_pos;
+    int win_y0 = y_pos < 0 ? 0 : y_pos;
+
+    int win_x1 = x_pos + width > winW ? winW : x_pos + width;
+    int win_y1 = y_pos + height > winH ? winH : y_pos + height;
+
+    if (win_x1 <= win_x0 || win_y1 <= win_y0)
+    {
+        return surface; // empty
+    }
+
+    int copy_width = win_x1 - win_x0;
+    int copy_height = win_y1 - win_y0;
+
+    surface.channels = 4;
+    surface.width = copy_width;
+    surface.height = copy_height;
+
+    surface.buffer = malloc(copy_width * copy_height * 4);
+    if (!surface.buffer)
+    {
+        return surface;
+    }
+
+    unsigned char *dst = (unsigned char *)surface.buffer;
+    unsigned int *src = window->buffer.pixels;
+
+    /* ---- Copy pixels ---- */
+    for (int y = win_y0; y < win_y1; y++)
+    {
+        int sy = y - win_y0;
+
+        for (int x = win_x0; x < win_x1; x++)
+        {
+            int sx = x - win_x0;
+
+            unsigned int p =
+                src[y * winW + x];
+
+            int dstPos = (sy * copy_width + sx) * 4;
+
+            dst[dstPos + 0] = (p >> 16) & 0xFF; // R
+            dst[dstPos + 1] = (p >> 8) & 0xFF;  // G
+            dst[dstPos + 2] = p & 0xFF;         // B
+            dst[dstPos + 3] = (p >> 24) & 0xFF; // A
+        }
+    }
+
+    return surface;
+}
+
 void CGIFreeWindowSurface(CGIWindowSurface surface)
 {
     if (surface.buffer)
