@@ -762,7 +762,6 @@ CGIWindowSurface CGIGetWindowSurfaceRegion(
     int win_x1 = x_pos + width > winW ? winW : x_pos + width;
     int win_y1 = y_pos + height > winH ? winH : y_pos + height;
 
-    /* If region is fully outside */
     if (win_x1 <= win_x0 || win_y1 <= win_y0)
     {
         return surface; // empty surface

@@ -64,12 +64,18 @@ CGIEventImage CGIGetWindowEventImage(CGIWindow* window);
 // /// @param eventImage CGIEventImage* event image to be logged
 // void CGILogEventImage(CGIEventImage* eventImage);
 
-/// @brief Get the current surface of the window
+/// @brief Get the current surface copy of the window
 /// @param window CGIWindow* window
 /// @return CGIWindowSurface(the current window surface as in an allocated memory buffer that needs to be freed after use)
 CGIWindowSurface CGIGetWindowSurface(CGIWindow* window);
 
-
+/// @brief Get the particular surface region copy of the window
+/// @param window CGIWindow* window
+/// @param x_pos x_pos requested as it may not be always valid
+/// @param y_pos y_pos requested as it may not be always valid 
+/// @param width width of the region requested as it may not be always valid 
+/// @param height height of  the region requested as it may not be always valid
+/// @return CGIWindowSurface(the current window surface as in an allocated memory buffer that needs to be freed after use)
 CGIWindowSurface CGIGetWindowSurfaceRegion(CGIWindow* window,int x_pos,int y_pos,int width,int height);
 
 /// @brief Free the resources associated with a CGIWindowSurface that was previously allocated
