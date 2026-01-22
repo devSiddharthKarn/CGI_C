@@ -1,36 +1,21 @@
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-
 #include "../include/cgi.h"
-#include "stb_image_write.h"
+#include "../include/cgi_font.h"
+
 int main(){
 
-    CGIWindow* window = CGICreateWindow("window","window",0,0,500,500,CGIMakeColor(100,200,122));
+    CGIWindow* window = CGICreateWindow("window","window",0,0,500,500,CGIMakeColor(0,0,0));
+
+    CGIPen* pen =CGIGeneratePen("arial.ttf",48.0f);
 
     CGIShowWindow(window);
 
     while(CGIIsWindowOpen(window)){
+
         CGIRefreshWindow(window,CGI_window_refresh_mode_rapid);
 
-
-        CGIClearBufferRegion(window,0,0,200,200,CGIMakeColor(0,0,0));
+        CGIWriteTextWithPen(window,pen,"Hello CGI   This is Siddharth's CGI library and most welcome",0,-100,0,0,1,2,1,CGI_true,CGIMakeColor(255,255,255));
 
         CGIRefreshBuffer(window);
-
-
-        if(CGIIsWindowKeyDown(window,CGI_KEYCODE_ENTER)){
-            CGIWindowSurface surface = CGIGetWindowSurfaceRegion(window,-200,0,300,300);
-            
-
-            stbi_write_png("window_surface.png",surface.width,surface.height,surface.channels,surface.buffer,surface.width*surface.channels);
-            
-            CGIFreeWindowSurface(surface);
-        }
-
     }
-
-    CGICloseWindow(window);
-    CGIWindowCleanup(window);
-    
 
 }

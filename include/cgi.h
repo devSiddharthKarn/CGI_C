@@ -100,6 +100,13 @@ CGIBool CGIShowWindow(CGIWindow *window);
 /// @return void
 void CGISetPixel(CGIWindow *window, int x_pos, int y_pos, CGIColor_t color);
 
+/// @brief to get the pixel color from the window framebuffer as CGIColor_t
+/// @param window CGIWindow* window as CGIWindow Instance
+/// @param x_pos The x_position in the window framebuffer from the left-most side of the window
+/// @param y_pos The y_position in the window framebuffer from the top-most side of the window
+/// @return returns the CGIColor_t color (if pixel is invalid it returns the CGIMakeColor(0,0,0))
+CGIColor_t CGIGetPixelColor(CGIWindow* window,int x_pos,int y_pos);
+
 /// @brief Refresh a specific region of the window's buffer(no return for less overhead and fast blitting)
 /// @param window CGIWindow* pointer to the window whose buffer region is to be refreshed
 /// @param x x-position of the region to be refreshed

@@ -1,173 +1,221 @@
-/*
- * CGI Input Testing Program
- * Tests all keyboard and mouse inputs
- */
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 
 #include "../include/cgi.h"
-#include <stdio.h>
-#include <stdlib.h>
+#include "../include/cgi_font.h"
+#include "time.h"
+#include "stdio.h"
+#include "stdlib.h"
+#include "string.h"
+#include "stb_image_write.h"
 
-// Helper function to print key states
-void PrintKeyState(const char* keyName, CGIWindow* window, CGIKeyCode keyCode) {
-    if (CGIIsWindowKeyDown(window, keyCode)) {
-        printf("[DOWN] %s\n", keyName);
+#define GRID_SIZE 20
+#define CELL_SIZE 25
+#define WINDOW_SIZE (GRID_SIZE * CELL_SIZE)
+#define MAX_SNAKE_LENGTH (GRID_SIZE * GRID_SIZE)
+
+typedef struct
+{
+    int x;
+    int y;
+} Position;
+
+typedef struct
+{
+    Position body[MAX_SNAKE_LENGTH];
+    int length;
+    int dx;
+    int dy;
+} Snake;
+
+typedef struct
+{
+    Position pos;
+    CGIBool active;
+} Food;
+
+void init_snake(Snake *snake)
+{
+    snake->length = 3;
+    snake->dx = 1;
+    snake->dy = 0;
+    for (int i = 0; i < snake->length; i++)
+    {
+        snake->body[i].x = GRID_SIZE / 2 - i;
+        snake->body[i].y = GRID_SIZE / 2;
     }
 }
 
-void PrintCursorButtonState(const char* buttonName, CGIWindow* window, CGIKeyCode buttonCode) {
-    if (CGIIsWindowCursorKeyDown(window, buttonCode)) {
-        printf("[MOUSE DOWN] %s\n", buttonName);
+void spawn_food(Food *food, Snake *snake)
+{
+    CGIBool valid;
+    do
+    {
+        valid = CGI_true;
+        food->pos.x = rand() % GRID_SIZE;
+        food->pos.y = rand() % GRID_SIZE;
+
+        for (int i = 0; i < snake->length; i++)
+        {
+            if (snake->body[i].x == food->pos.x && snake->body[i].y == food->pos.y)
+            {
+                valid = CGI_false;
+                break;
+            }
+        }
+    } while (!valid);
+    food->active = CGI_true;
+}
+
+CGIBool check_collision(Snake *snake)
+{
+    Position head = snake->body[0];
+
+    if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE)
+    {
+        return CGI_true;
+    }
+
+    for (int i = 1; i < snake->length; i++)
+    {
+        if (snake->body[i].x == head.x && snake->body[i].y == head.y)
+        {
+            return CGI_true;
+        }
+    }
+
+    return CGI_false;
+}
+
+void update_snake(Snake *snake, Food *food, int *score)
+{
+    Position new_head = {
+        snake->body[0].x + snake->dx,
+        snake->body[0].y + snake->dy};
+
+    for (int i = snake->length - 1; i > 0; i--)
+    {
+        snake->body[i] = snake->body[i - 1];
+    }
+    snake->body[0] = new_head;
+
+    if (food->active && new_head.x == food->pos.x && new_head.y == food->pos.y)
+    {
+        if (snake->length < MAX_SNAKE_LENGTH)
+        {
+            snake->length++;
+            (*score) += 10;
+        }
+        food->active = CGI_false;
     }
 }
 
-int main() {
-    // Create window
-    CGIWindow* window = CGICreateWindow(
-        "InputTestClass",
-        "CGI Input Test - Press keys and move mouse",
-        100, 100,
-        800, 600,
-        CGIMakeColor(30, 30, 40)
-    );
+void draw_game(CGIWindow *window, Snake *snake, Food *food, int score, double fps)
+{
+    CGIClearBuffer(window, CGIMakeColor(20, 20, 30));
 
-    if (!window) {
-        printf("Failed to create window!\n");
-        return -1;
+    for (int i = 0; i < snake->length; i++)
+    {
+        int x = snake->body[i].x * CELL_SIZE;
+        int y = snake->body[i].y * CELL_SIZE;
+        CGIColor_t color = (i == 0) ? CGIMakeColor(100, 255, 100) : CGIMakeColor(50, 200, 50);
+        CGIClearBufferRegion(window, x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, color);
     }
 
+    if (food->active)
+    {
+        int fx = food->pos.x * CELL_SIZE;
+        int fy = food->pos.y * CELL_SIZE;
+        CGIClearBufferRegion(window, fx + 1, fy + 1, CELL_SIZE - 2, CELL_SIZE - 2, CGIMakeColor(255, 50, 50));
+    }
+
+    char fps_text[50];
+    snprintf(fps_text, 50, "FPS: %.1f  Score: %d", fps, score);
+    CGIWriteText(window, fps_text, 5, 5, 1, 1, 2, 2, 0, CGI_false, CGIMakeColor(255, 255, 255));
+
+    CGIRefreshBuffer(window);
+}
+
+int main()
+{
+    srand((unsigned int)time(NULL));
+
+    CGIWindow *window = CGICreateWindow("SnakeGame", "Snake Game - Use Arrow Keys", 100, 100,
+                                        WINDOW_SIZE, WINDOW_SIZE, CGIMakeColor(20, 20, 30));
     CGIShowWindow(window);
 
-    printf("=== CGI Input Test Started ===\n");
-    printf("Press ESC to exit\n");
-    printf("Try pressing multiple keys simultaneously\n\n");
+    Snake snake;
+    Food food = {.active = CGI_false};
+    int score = 0;
+    double move_timer = 0;
+    double move_delay = 0.15;
 
-    int frameCount = 0;
+    init_snake(&snake);
+    spawn_food(&food, &snake);
 
-    while (CGIIsWindowOpen(window)) {
-        // Refresh window state
+    clock_t last_time = clock();
+    double fps = 0.0;
+
+    while (CGIIsWindowOpen(window))
+    {
+        clock_t current_time = clock();
+        double delta_time = (double)(current_time - last_time) / CLOCKS_PER_SEC;
+        last_time = current_time;
+
+        if (delta_time > 0)
+        {
+            fps = 1.0 / delta_time;
+        }
+
         CGIRefreshWindow(window, CGI_window_refresh_mode_rapid);
 
-        // Check for ESC to exit
-        if (CGIIsWindowKeyDown(window, CGI_KEYCODE_ESCAPE)) {
-            printf("\nESC pressed - Exiting...\n");
-            break;
+        if (CGIIsWindowKeyDown(window, CGI_KEYCODE_UP) && snake.dy == 0)
+        {
+            snake.dx = 0;
+            snake.dy = -1;
+        }
+        if (CGIIsWindowKeyDown(window, CGI_KEYCODE_DOWN) && snake.dy == 0)
+        {
+            snake.dx = 0;
+            snake.dy = 1;
+        }
+        if (CGIIsWindowKeyDown(window, CGI_KEYCODE_LEFT) && snake.dx == 0)
+        {
+            snake.dx = -1;
+            snake.dy = 0;
+        }
+        if (CGIIsWindowKeyDown(window, CGI_KEYCODE_RIGHT) && snake.dx == 0)
+        {
+            snake.dx = 1;
+            snake.dy = 0;
+        }
+        if (CGIIsWindowKeyDown(window, CGI_KEYCODE_ESCAPE))
+        {
+            CGICloseWindow(window);
         }
 
-        // Only print status every 10 frames to avoid spam
-        if (frameCount % 10 == 0) {
-            // Clear console (Windows)
-            system("clear");
-            
-            printf("=== CGI Input Test ===\n");
-            printf("Frame: %d\n\n", frameCount);
+        move_timer += delta_time;
+        if (move_timer >= move_delay)
+        {
+            move_timer = 0;
 
-            // Cursor position
-            CGIPoint cursor = CGIGetWindowCursorPosition(window);
-            printf("Cursor Position: (%d, %d)\n\n", cursor.x, cursor.y);
+            update_snake(&snake, &food, &score);
 
-            // Window state
-            printf("Window Focused: %s\n", CGIIsWindowFocused(window) ? "YES" : "NO");
-            printf("Window Resized: %s\n\n", CGIIsWindowResized(window) ? "YES" : "NO");
-
-            // Scroll state
-            if (CGIIsWindowScrolledX(window)) {
-                printf("Scroll X: %.2f\n", CGIGetWindowScrollDeltaX(window));
-            }
-            if (CGIIsWindowScrolledY(window)) {
-                printf("Scroll Y: %.2f\n", CGIGetWindowScrollDeltaY(window));
+            if (check_collision(&snake))
+            {
+                init_snake(&snake);
+                score = 0;
+                food.active = CGI_false;
             }
 
-            // Mouse buttons
-            printf("\n--- Mouse Buttons ---\n");
-            PrintCursorButtonState("Left Mouse", window, CGI_KEYCODE_MOUSE_L);
-            PrintCursorButtonState("Right Mouse", window, CGI_KEYCODE_MOUSE_R);
-
-            // Alphabet keys
-            printf("\n--- Alphabet Keys ---\n");
-            PrintKeyState("A", window, CGI_KEYCODE_A);
-            PrintKeyState("B", window, CGI_KEYCODE_B);
-            PrintKeyState("C", window, CGI_KEYCODE_C);
-            PrintKeyState("D", window, CGI_KEYCODE_D);
-            PrintKeyState("E", window, CGI_KEYCODE_E);
-            PrintKeyState("F", window, CGI_KEYCODE_F);
-            PrintKeyState("G", window, CGI_KEYCODE_G);
-            PrintKeyState("H", window, CGI_KEYCODE_H);
-            PrintKeyState("I", window, CGI_KEYCODE_I);
-            PrintKeyState("J", window, CGI_KEYCODE_J);
-            PrintKeyState("K", window, CGI_KEYCODE_K);
-            PrintKeyState("L", window, CGI_KEYCODE_L);
-            PrintKeyState("M", window, CGI_KEYCODE_M);
-            PrintKeyState("N", window, CGI_KEYCODE_N);
-            PrintKeyState("O", window, CGI_KEYCODE_O);
-            PrintKeyState("P", window, CGI_KEYCODE_P);
-            PrintKeyState("Q", window, CGI_KEYCODE_Q);
-            PrintKeyState("R", window, CGI_KEYCODE_R);
-            PrintKeyState("S", window, CGI_KEYCODE_S);
-            PrintKeyState("T", window, CGI_KEYCODE_T);
-            PrintKeyState("U", window, CGI_KEYCODE_U);
-            PrintKeyState("V", window, CGI_KEYCODE_V);
-            PrintKeyState("W", window, CGI_KEYCODE_W);
-            PrintKeyState("X", window, CGI_KEYCODE_X);
-            PrintKeyState("Y", window, CGI_KEYCODE_Y);
-            PrintKeyState("Z", window, CGI_KEYCODE_Z);
-
-            // Number keys
-            printf("\n--- Number Keys ---\n");
-            PrintKeyState("0", window, CGI_KEYCODE_0);
-            PrintKeyState("1", window, CGI_KEYCODE_1);
-            PrintKeyState("2", window, CGI_KEYCODE_2);
-            PrintKeyState("3", window, CGI_KEYCODE_3);
-            PrintKeyState("4", window, CGI_KEYCODE_4);
-            PrintKeyState("5", window, CGI_KEYCODE_5);
-            PrintKeyState("6", window, CGI_KEYCODE_6);
-            PrintKeyState("7", window, CGI_KEYCODE_7);
-            PrintKeyState("8", window, CGI_KEYCODE_8);
-            PrintKeyState("9", window, CGI_KEYCODE_9);
-
-            // Arrow keys
-            printf("\n--- Arrow Keys ---\n");
-            PrintKeyState("UP", window, CGI_KEYCODE_UP);
-            PrintKeyState("DOWN", window, CGI_KEYCODE_DOWN);
-            PrintKeyState("LEFT", window, CGI_KEYCODE_LEFT);
-            PrintKeyState("RIGHT", window, CGI_KEYCODE_RIGHT);
-
-            // Special keys
-            printf("\n--- Special Keys ---\n");
-            PrintKeyState("SPACE", window, CGI_KEYCODE_SPACE);
-            PrintKeyState("ENTER", window, CGI_KEYCODE_ENTER);
-            PrintKeyState("BACKSPACE", window, CGI_KEYCODE_BACKSPACE);
-            PrintKeyState("SHIFT", window, CGI_KEYCODE_SHIFT);
-            PrintKeyState("CTRL", window, CGI_KEYCODE_CTRL);
-            PrintKeyState("ALT", window, CGI_KEYCODE_ALT);
-
-            // Function keys
-            printf("\n--- Function Keys ---\n");
-            PrintKeyState("F1", window, CGI_KEYCODE_F1);
-            PrintKeyState("F2", window, CGI_KEYCODE_F2);
-            PrintKeyState("F3", window, CGI_KEYCODE_F3);
-            PrintKeyState("F4", window, CGI_KEYCODE_F4);
-            PrintKeyState("F5", window, CGI_KEYCODE_F5);
-            PrintKeyState("F6", window, CGI_KEYCODE_F6);
-            PrintKeyState("F7", window, CGI_KEYCODE_F7);
-            PrintKeyState("F8", window, CGI_KEYCODE_F8);
-            PrintKeyState("F9", window, CGI_KEYCODE_F9);
-            PrintKeyState("F10", window, CGI_KEYCODE_F10);
-            PrintKeyState("F11", window, CGI_KEYCODE_F11);
-            PrintKeyState("F12", window, CGI_KEYCODE_F12);
-
-            printf("\n\nPress ESC to exit\n");
+            if (!food.active)
+            {
+                spawn_food(&food, &snake);
+            }
         }
 
-        frameCount++;
-
-        // Small delay to prevent CPU spinning
-        // You might want to use a proper frame timing mechanism
+        draw_game(window, &snake, &food, score, fps);
     }
 
-    // Cleanup
-    CGICloseWindow(window);
     CGIWindowCleanup(window);
-
-    printf("\n=== Test Completed ===\n");
     return 0;
 }

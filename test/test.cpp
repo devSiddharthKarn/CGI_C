@@ -1,24 +1,53 @@
-#include "iostream"
-#include "vulkan/vulkan.h"
+#define CGI_IMPLEMENTATION_MODE_VERBOSE
 
-class Vulkan{
-    VkApplicationInfo appinfo;
-    VkInstance instance;
+#include "../include/cgi.h"
+
+int main(){
+
+    CGIWindow* window = CGICreateWindow("abc","my custom window",0,0,500,500,CGIMakeColor(0,233,0));
+
+    CGIShowWindow(window);
+
+    CGIPoint p{0,0};
 
 
-    public:
-    Vulkan(){};
+    
 
-    void init(std::string appname, std::string enginename){
-        appinfo.apiVersion=VK_API_VERSION_1_2;
-        appinfo.applicationVersion=VK_MAKE_VERSION(1,0,0);
-        appinfo.engineVersion=VK_MAKE_VERSION(1,0,0);
-        appinfo.pApplicationName=appname.c_str();
-        appinfo.pEngineName=enginename.c_str();
-        appinfo.pNext=NULL;
-        appinfo.sType=VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    while(CGIIsWindowOpen(window)){
+        CGIRefreshWindow(window,CGI_window_refresh_mode_rapid);
 
-        VkInstanceCreateInfo createInfo={};
-        createInfo.
+
+
+        // CGIClearBuffer(window,CGIMakeColor(0,233,0));
+        CGIClearBufferRegion(window,0,0,500,500,CGIMakeColor(0,233,0));
+
+        for(int i=p.y;i<50+p.y;i++){
+            for(int j=p.x;j<30+p.x;j++){
+
+                CGISetPixel(window,j,i,CGIMakeColor(0,0,0));
+            }
+        }
+
+        // CGIRefreshBuffer(window);
+
+        CGIRefreshBufferRegion(window,0,0,500,500);
+
+
+        if(CGIIsWindowKeyDown(window,CGI_KEYCODE_W)){
+            p.y--;
+        }
+
+        if(CGIIsWindowKeyDown(window,CGI_KEYCODE_S)){
+            p.y++;
+        }
+
+        if(CGIIsWindowKeyDown(window,CGI_KEYCODE_A)){
+            p.x--;
+        }
+
+        if(CGIIsWindowKeyDown(window,CGI_KEYCODE_D)){
+            p.x++;
+        }
     }
-};
+
+}

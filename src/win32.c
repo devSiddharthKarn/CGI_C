@@ -1212,6 +1212,33 @@ void CGISetPixel(CGIWindow *window, int x_pos, int y_pos, CGIColor_t color)
     window->windowState.buffer[y_pos * window->windowState.buffer_width + x_pos] = RGB(color.r, color.g, color.b);
 }
 
+
+/// @brief to get the pixel color from the window framebuffer as CGIColor_t
+/// @param window CGIWindow* window as CGIWindow Instance
+/// @param x_pos The x_position in the window framebuffer from the left-most side of the window
+/// @param y_pos The y_position in the window framebuffer from the top-most side of the window
+/// @return returns the CGIColor_t color (if pixel is invalid it returns the CGIMakeColor(0,0,0))
+CGIColor_t CGIGetPixelColor(CGIWindow* window,int x_pos,int y_pos){
+
+    if(!window || !window->windowState.buffer) return CGIMakeColor(0,0,0);
+
+    
+    if (x_pos < 0 || y_pos < 0 ||
+        x_pos >= (int)window->windowState.buffer_width ||
+        y_pos >= (int)window->windowState.buffer_height)
+        return CGIMakeColor(0,0,0);
+
+    COLORREF pix_color = window->windowState.buffer[y_pos*window->windowState.buffer_width+x_pos];
+
+    CGIColor_t color;
+    color.r = GetRValue(pix_color);
+    color.g = GetGValue(pix_color);
+    color.b=GetBValue(pix_color);
+
+    return color;
+
+}
+
 /// @brief Check if the specified window has been resized
 /// @param window Pointer to the CGIWindow structure
 /// @return CGI_true if the window has been resized, otherwise CGI_false

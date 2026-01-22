@@ -7,11 +7,11 @@ with windows build binary
 gcc test/test.c -Lbuild/windows -lcgi -lgdi32 -o test/testBinaryBuild.exe
 
 for window win32 lgdi32
-gcc test/test.c src/win32.c src/common/font_rasterizer.c -o test.exe -lgdi32  -Iinclude
+gcc test/test.c src/main.c -o test.exe -lgdi32  -Iinclude
 
 
 with Linux build binary
  gcc test/test.c -o test/testLinuxBinaryBuild.out -Lbuild/linux -lcgi -lX11 -lXrandr
 
 for linux based on X11
-gcc test/test.c src/linux.c src/common/font_rasterizer.c -lX11 -lXext -lXrandr -Iinclude -o test/test.out
+gcc test/test.c src/main.c -lX11 -lXext -lXrandr -Iinclude -o test/test.out

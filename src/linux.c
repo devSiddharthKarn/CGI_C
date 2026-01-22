@@ -392,6 +392,32 @@ void CGISetPixel(CGIWindow *window, int x_pos, int y_pos, CGIColor_t color)
     window->buffer.pixels[y_pos * window->buffer.width + x_pos] = pixelColor;
 }
 
+
+
+
+/// @brief to get the pixel color from the window framebuffer as CGIColor_t
+/// @param window CGIWindow* window as CGIWindow Instance
+/// @param x_pos The x_position in the window framebuffer from the left-most side of the window
+/// @param y_pos The y_position in the window framebuffer from the top-most side of the window
+/// @return returns the CGIColor_t color (if pixel is invalid it returns the CGIMakeColor(0,0,0))
+CGIColor_t CGIGetPixelColor(CGIWindow* window,int x_pos,int y_pos){
+    if(! window || !window->buffer.pixels) return CGIMakeColor(0,0,0);
+
+    
+    if (x_pos < 0 || x_pos >= window->buffer.width || y_pos < 0 || y_pos >= window->buffer.height)
+        return CGIMakeColor(0,0,0);
+
+    unsigned int pixelColor = window->buffer.pixels[y_pos* window->buffer.width + x_pos];
+
+    CGIColor_t color;
+    color.r = (pixelColor>>16) & 0xFF;
+    color.g = (pixelColor >> 8) & 0xFF;
+    color.b = (pixelColor >> 0) & 0xFF;
+    
+    return color;
+
+}
+
 /// @brief Clears the CGI window's buffer with the specified color
 /// @param window Pointer to the CGI window
 /// @param color Color to clear the buffer with
