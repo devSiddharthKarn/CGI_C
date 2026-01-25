@@ -14,4 +14,4 @@ with Linux build binary
  gcc test/test.c -o test/testLinuxBinaryBuild.out -Lbuild/linux -lcgi -lX11 -lXrandr
 
 for linux based on X11
-gcc test/test.c src/main.c -lX11 -lXext -lXrandr -Iinclude -o test/test.out
+gcc test/test.c src/main.c -lX11 -lXext -lXrandr -Iinclude -o test/test.out -lm

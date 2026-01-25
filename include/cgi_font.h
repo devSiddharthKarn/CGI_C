@@ -64,5 +64,12 @@ CGIPen *CGIGeneratePen(const char *TTF_Filename, float fontHeight);
 /// @return CGIBool indicating success or failure
 CGIBool CGIWriteTextWithPen(CGIWindow *window, CGIPen *pen, const char *text, unsigned int x_pos, unsigned int y_pos, unsigned int x_spacing, unsigned int y_spacing, float h_scale, float v_scale, unsigned int offset, CGIBool line_wrap, CGIColor_t color);
 
+
+
+/// @brief function to destroy the pen created by CGIGeneratePen
+/// @param pen CGIPen* pen to destroy
+/// @return void
+void CGIDestroyPen(CGIPen* pen);
+
 CGI_END_DECLS
 #endif
