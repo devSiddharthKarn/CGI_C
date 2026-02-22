@@ -11,7 +11,7 @@ int main(){
     CGIPoint p{0,0};
 
 
-    
+    CGISetWindowResizableLogic(window,CGI_false);
 
     while(CGIIsWindowOpen(window)){
         CGIRefreshWindow(window,CGI_window_refresh_mode_rapid);
